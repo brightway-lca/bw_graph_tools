@@ -174,6 +174,9 @@ def guess_production_exchanges(mm: mu.MappedMatrix) -> Tuple[np.ndarray, np.ndar
     if row_indices.shape != col_indices.shape:
         raise ValueError("Guessed row indices do not match guessed column indices.")
 
+    missing = np.setdiff1d(
+        np.arange(mm.matrix.shape[0]), col_indices, assume_unique=True
+    )
     if missing.size:
         raise UnclearProductionExchange(
             "Can't find production exchanges for columns: {}".format(list(missing))
