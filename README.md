@@ -42,6 +42,14 @@ _bw_graph_tools_ is free and open source software.
 If you encounter any problems,
 please [file an issue] along with a detailed description.
 
+## Documentation
+
+1. Install the `sphinx-furo` conda environment from the file `.docs/environment.yml`.
+2. Build the documentation locally by running
+
+```
+sphinx-autobuild docs _build/html -a -j auto --open-browser
+```
 
 <!-- github-only -->
 
