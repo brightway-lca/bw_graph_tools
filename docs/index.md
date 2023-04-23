@@ -15,10 +15,10 @@ hidden:
 maxdepth: 1
 ---
 
-Usage
-Reference <api/modules>
-contributing
-Code of Conduct <codeofconduct>
-License <license>
-Changelog <changelog>
+pages/usage
+Reference <pages/api>
+pages/contributing
+Code of Conduct <pages/codeofconduct>
+License <pages/license>
+Changelog <pages/changelog>
 ```
