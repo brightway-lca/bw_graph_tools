@@ -160,7 +160,7 @@ class Flow:
         return self.score < other.score
 
 
-class GraphTraversal(object):
+class GraphTraversal:
     """
     Traverse a supply chain, following paths of greatest impact.
 
