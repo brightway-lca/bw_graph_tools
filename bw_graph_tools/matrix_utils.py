@@ -162,20 +162,13 @@ def guess_production_exchanges(mm: mu.MappedMatrix) -> Tuple[np.ndarray, np.ndar
         np.arange(mm.matrix.shape[0]), col_indices, assume_unique=True
     )
 
-    print("After first heuristic:")
-    print(row_indices, col_indices)
-
     # Short circuit other steps if possible; assumption is that this step will
     # be taken for most matrices
     if not missing.size:
         return (row_indices, col_indices)
 
     row_indices, col_indices = gpe_second_heuristic(mm, row_indices, col_indices)
-    print("After second heuristic:")
-    print(row_indices, col_indices)
     row_indices, col_indices = gpe_third_heuristic(mm, row_indices, col_indices)
-    print("After third heuristic:")
-    print(row_indices, col_indices)
 
     # No idea how this could happen, but better raise an error than pass bad data
     if row_indices.shape != col_indices.shape:
