@@ -105,11 +105,11 @@ class Edge:
     consumer_index : int
         The matrix column index of the consuming activity
     consumer_id : int
-        The id that identifies the consuming activity in the datapackage
+        The traversal-specific unique id of the consuming activity
     producer_index : int
         The matrix column index of the producing activity
     producer_id : int
-        The id that identifies the producing activity in the datapackage
+        The traversal-specific unique id of the producing activity
     product_index : int
         The matrix row index of the consumed product
     amount : float
