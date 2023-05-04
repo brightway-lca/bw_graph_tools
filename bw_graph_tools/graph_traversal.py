@@ -463,7 +463,6 @@ class GraphTraversal:
             if producer_index in static_activity_indices:
                 return
 
-            next(calculation_count)
             supply = caching_solver(product_index, product_amount)
             activity_supply_amount = supply[producer_index]
             cumulative_score = float((characterized_biosphere * supply).sum())
