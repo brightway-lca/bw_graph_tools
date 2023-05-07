@@ -7,7 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.0] - 2022-26-22
+## [0.2.0] - 2023-05-07
+
+* Corrected graph traversal scaling and switched to `NewNodeEachVisitGraphTraversal` class name.
+* Fixed bug in first heuristic for guessing production exchanges
+* Integration tests for graph traversal
+
+## [0.1.0] - 2023-04-26
+
+First release
 
 ### Added
 
