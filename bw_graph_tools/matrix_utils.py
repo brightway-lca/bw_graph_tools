@@ -58,16 +58,42 @@ def gpe_first_heuristic(mm: mu.MappedMatrix) -> Tuple[np.ndarray, np.ndarray]:
 
     Returns a tuple of numpy integer matrix indices, rows by columns.
     """
-    found = []
 
-    first_heuristic = np.hstack(
-        [group.row_masked[group.row_masked == group.col_masked] for group in mm.groups]
-    )
-    if first_heuristic.size:
-        found.append((first_heuristic, first_heuristic))
+    def get_used_mapped_indices_for_group(
+        group: mu.ResourceGroup,
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        indices = group.get_indices_data()
 
-    row_indices = np.hstack([array for array, _ in found])
-    col_indices = np.hstack([array for _, array in found])
+        # Need to check the original input values, not after mapping when they are
+        # normalized to [0, X] range.
+        ident_mask = indices["row"] == indices["col"]
+        row_mapped = group.row_mapper.map_array(indices["row"][ident_mask])
+        col_mapped = group.col_mapper.map_array(indices["col"][ident_mask])
+
+        if (row_mapped == -1).sum() or (col_mapped == -1).sum():
+            ERROR = """
+Found unmapped values in technosphere matrix generator, but that should be impossible.
+
+{} unmapped values in the row indices: {}
+{} unmapped values in the column indices: {}
+
+Please report this as an issue, something went very wrong!
+            """
+            raise ValueError(
+                ERROR.format(
+                    (row_mapped == -1).sum(),
+                    indices["row"][row_mapped == -1],
+                    (col_mapped == -1).sum(),
+                    indices["col"][col_mapped == -1],
+                )
+            )
+
+        return row_mapped, col_mapped
+
+    first_heuristic = [get_used_mapped_indices_for_group(group) for group in mm.groups]
+
+    row_indices = np.hstack([array for array, _ in first_heuristic])
+    col_indices = np.hstack([array for _, array in first_heuristic])
 
     return row_indices, col_indices
 
@@ -161,6 +187,8 @@ def guess_production_exchanges(mm: mu.MappedMatrix) -> Tuple[np.ndarray, np.ndar
     missing = np.setdiff1d(
         np.arange(mm.matrix.shape[0]), col_indices, assume_unique=True
     )
+
+    print("After first heuristic:", row_indices, col_indices)
 
     # Short circuit other steps if possible; assumption is that this step will
     # be taken for most matrices
