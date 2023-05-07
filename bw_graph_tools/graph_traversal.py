@@ -1,10 +1,11 @@
-from dataclasses import dataclass
-from heapq import heappush, heappop
-from scipy.sparse import spmatrix
-import numpy as np
 import warnings
-import matrix_utils as mu
+from dataclasses import dataclass
 from functools import lru_cache
+from heapq import heappop, heappush
+
+import matrix_utils as mu
+import numpy as np
+from scipy.sparse import spmatrix
 
 try:
     from bw2data import databases
@@ -72,7 +73,7 @@ class Node:
     reference_product_production_amount : float
         The *net* production amount of this activity's reference product
     supply_amount : float
-        The amount of the *activity* needed to supply the demand from the requesting supply chain edge. *Not scaled to the reference product production amount*.
+        The amount of the *activity* (not reference product!) needed to supply the demand from the requesting supply chain edge.
     cumulative_score : float
         Total LCIA score attributed to `supply_amount` of this activity. Includes direct emissions unless explicitly removed.
     direct_emissions_score : float
@@ -104,11 +105,11 @@ class Edge:
     ----------
     consumer_index : int
         The matrix column index of the consuming activity
-    consumer_id : int
+    consumer_unique_id : int
         The traversal-specific unique id of the consuming activity
     producer_index : int
         The matrix column index of the producing activity
-    producer_id : int
+    producer_unique_id : int
         The traversal-specific unique id of the producing activity
     product_index : int
         The matrix row index of the consumed product
@@ -117,9 +118,9 @@ class Edge:
     """
 
     consumer_index: int
-    consumer_id: int
+    consumer_unique_id: int
     producer_index: int
-    producer_id: int
+    producer_unique_id: int
     product_index: int
     amount: float
 
@@ -160,7 +161,7 @@ class Flow:
         return self.score < other.score
 
 
-class GraphTraversal:
+class NewNodeEachVisitGraphTraversal:
     """
     Traverse a supply chain, following paths of greatest impact.
 
@@ -208,7 +209,7 @@ class GraphTraversal:
         * `demand`
         * `demand_array`
 
-        You can subclass `GraphTraversal` and redefine `get_characterized_biosphere` if your LCA class does not have a traditional `characterization_matrix` and `biosphere_matrix`.
+        You can subclass `NewNodeEachVisitGraphTraversal` and redefine `get_characterized_biosphere` if your LCA class does not have a traditional `characterization_matrix` and `biosphere_matrix`.
 
         The return object is a dictionary with four values. The `nodes` is a dictionary of visited **activities**; the keys in this dictionary are unique increasing integer ids (not related to any other ids or indices), and values are instances of the `Node` dataclass. Each `Node` has a `unique_id`, as every time we arrive at an activity (even if we have seen it before via another branch of the supply chain), we create a new `Node` object with a unique id. See the `Node` documentation for its other attributes.
 
@@ -285,7 +286,7 @@ class GraphTraversal:
 
         cls.traverse_edges(
             consumer_index=functional_unit_unique_id,
-            consumer_id=functional_unit_unique_id,
+            consumer_unique_id=functional_unit_unique_id,
             product_indices=[
                 lca_object.dicts.product[key] for key in lca_object.demand
             ],
@@ -416,7 +417,7 @@ class GraphTraversal:
 
             cls.traverse_edges(
                 consumer_index=node.activity_index,
-                consumer_id=node.unique_id,
+                consumer_unique_id=node.unique_id,
                 product_indices=product_indices,
                 product_amounts=product_amounts,
                 lca=lca,
@@ -439,7 +440,7 @@ class GraphTraversal:
     def traverse_edges(
         cls,
         consumer_index: int,
-        consumer_id: int,
+        consumer_unique_id: int,
         product_indices: list[int],
         product_amounts: list[float],
         lca: LCA,
@@ -464,8 +465,11 @@ class GraphTraversal:
                 return
 
             supply = caching_solver(product_index, product_amount)
-            activity_supply_amount = supply[producer_index]
             cumulative_score = float((characterized_biosphere * supply).sum())
+            reference_product_net_production_amount = matrix[
+                product_index, producer_index
+            ]
+            scale = product_amount / reference_product_net_production_amount
 
             if abs(cumulative_score) < cutoff_score:
                 return
@@ -478,21 +482,19 @@ class GraphTraversal:
                     product_index
                 ],
                 reference_product_index=product_index,
-                reference_product_production_amount=matrix[
-                    product_index, producer_index
-                ],
-                supply_amount=activity_supply_amount,
+                reference_product_production_amount=reference_product_net_production_amount,
+                supply_amount=scale,
                 cumulative_score=cumulative_score,
                 direct_emissions_score=(
-                    activity_supply_amount * characterized_biosphere[:, producer_index]
+                    scale * characterized_biosphere[:, producer_index]
                 ).sum(),
             )
             edges.append(
                 Edge(
                     consumer_index=consumer_index,
-                    consumer_id=consumer_id,
+                    consumer_unique_id=consumer_unique_id,
                     producer_index=producer_index,
-                    producer_id=producing_node.unique_id,
+                    producer_unique_id=producing_node.unique_id,
                     product_index=product_index,
                     amount=product_amount,
                 )
@@ -501,10 +503,7 @@ class GraphTraversal:
             if separate_biosphere_flows:
                 cls.add_biosphere_flows(
                     flows=flows,
-                    matrix=(
-                        activity_supply_amount
-                        * characterized_biosphere[:, producer_index]
-                    ).tocoo(),
+                    matrix=(scale * characterized_biosphere[:, producer_index]).tocoo(),
                     lca=lca,
                     node=producing_node,
                     biosphere_cutoff_score=biosphere_cutoff_score,
@@ -652,7 +651,7 @@ class GraphTraversal:
         return rows, vals
 
 
-class AssumedDiagonalGraphTraversal(GraphTraversal):
+class AssumedDiagonalGraphTraversal(NewNodeEachVisitGraphTraversal):
     @classmethod
     def get_production_exchanges(
         cls, mapped_matrix: mu.MappedMatrix

@@ -1,9 +1,9 @@
-from bw2calc import LCA
-from bw2data import Database
-from bw2data.tests import bw2test
 import bw_processing as bwp
 import matrix_utils as mu
 import numpy as np
+from bw2calc import LCA
+from bw2data import Database
+from bw2data.tests import bw2test
 
 from bw_graph_tools.matrix_utils import gpe_first_heuristic
 

@@ -188,8 +188,6 @@ def guess_production_exchanges(mm: mu.MappedMatrix) -> Tuple[np.ndarray, np.ndar
         np.arange(mm.matrix.shape[0]), col_indices, assume_unique=True
     )
 
-    print("After first heuristic:", row_indices, col_indices)
-
     # Short circuit other steps if possible; assumption is that this step will
     # be taken for most matrices
     if not missing.size:
