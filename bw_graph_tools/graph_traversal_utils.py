@@ -1,13 +1,13 @@
 from typing import List, Optional
 
-import sknetwork as skn
+from bw2calc import LCA
 from scipy import sparse
+import sknetwork as skn
 
 from .matrix_utils import to_normalized_adjacency_matrix
 
 try:
     import bw2data as bd
-    from bw2calc import LCA
     from bw2data import Edge, Node
 
     brightway_available = True
@@ -17,7 +17,7 @@ except ImportError:
         def get_node(self):
             pass
 
-    bd, LCA, Node, Edge = Dummy(), Dummy(), Dummy(), Dummy()
+    bd, Node, Edge = Dummy(), Dummy(), Dummy()
     brightway_available = False
 
 

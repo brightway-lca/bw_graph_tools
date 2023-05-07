@@ -3,20 +3,15 @@ from dataclasses import dataclass
 from functools import lru_cache
 from heapq import heappop, heappush
 
+from bw2calc import LCA
+from scipy.sparse import spmatrix
 import matrix_utils as mu
 import numpy as np
-from scipy.sparse import spmatrix
 
 try:
     from bw2data import databases
 except ImportError:
     databases = {}
-try:
-    from bw2calc import LCA
-except ImportError:
-
-    class LCA:
-        pass
 
 
 from .matrix_utils import guess_production_exchanges
