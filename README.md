@@ -27,6 +27,8 @@ You can install _bw_graph_tools_ via [pip] from [PyPI]:
 $ pip install bw_graph_tools
 ```
 
+Packages are also on conda at the [channel cmutel](https://anaconda.org/cmutel/bw_graph_tools).
+
 ## Contributing
 
 Contributions are very welcome.
