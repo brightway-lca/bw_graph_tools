@@ -4,7 +4,7 @@ from bw2calc import LCA
 from scipy import sparse
 import sknetwork as skn
 
-from .matrix_utils import to_normalized_adjacency_matrix
+from .matrix_tools import to_normalized_adjacency_matrix
 
 try:
     import bw2data as bd

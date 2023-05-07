@@ -14,7 +14,7 @@ except ImportError:
     databases = {}
 
 
-from .matrix_utils import guess_production_exchanges
+from .matrix_tools import guess_production_exchanges
 
 
 class CachingSolver:

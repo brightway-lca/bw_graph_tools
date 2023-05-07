@@ -5,7 +5,7 @@ from bw2calc import LCA
 from bw2data import Database
 from bw2data.tests import bw2test
 
-from bw_graph_tools.matrix_utils import gpe_first_heuristic
+from bw_graph_tools.matrix_tools import gpe_first_heuristic
 
 
 @bw2test

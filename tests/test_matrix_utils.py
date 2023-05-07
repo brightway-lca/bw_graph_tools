@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from bw_graph_tools.errors import UnclearProductionExchange
-from bw_graph_tools.matrix_utils import guess_production_exchanges
+from bw_graph_tools.matrix_tools import guess_production_exchanges
 
 
 @pytest.mark.skip(reason="MappedMatrix won't allow empty matrix construction")

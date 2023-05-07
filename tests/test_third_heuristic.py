@@ -2,7 +2,7 @@ import bw_processing as bwp
 import matrix_utils as mu
 import numpy as np
 
-from bw_graph_tools.matrix_utils import gpe_third_heuristic
+from bw_graph_tools.matrix_tools import gpe_third_heuristic
 
 
 def test_third_heuristic_empty_existing():
