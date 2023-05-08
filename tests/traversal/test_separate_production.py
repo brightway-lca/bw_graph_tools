@@ -1,60 +1,10 @@
-from numbers import Number
-
 import numpy as np
 from bw2calc import LCA
 from bw2data import Database, Method
 from bw2data.tests import bw2test
 
-from bw_graph_tools import NewNodeEachVisitGraphTraversal, guess_production_exchanges
-
-
-def equal_dict(a, b, fields):
-    for field in fields:
-        if field in b:
-            if isinstance(b[field], Number):
-                assert np.allclose(getattr(a, field), b[field])
-            else:
-                assert getattr(a, field) == b[field]
-
-
-def edge_equal_dict(a, b):
-    FIELDS = [
-        "consumer_index",
-        "consumer_unique_id",
-        "producer_index",
-        "producer_unique_id",
-        "product_index",
-        "amount",
-    ]
-    equal_dict(a, b, FIELDS)
-
-
-def flow_equal_dict(a, b):
-    FIELDS = [
-        "flow_datapackage_id",
-        "flow_index",
-        "activity_unique_id",
-        "activity_id",
-        "activity_index",
-        "amount",
-        "score",
-    ]
-    equal_dict(a, b, FIELDS)
-
-
-def node_equal_dict(a, b):
-    FIELDS = [
-        "unique_id",
-        "activity_datapackage_id",
-        "activity_index",
-        "reference_product_datapackage_id",
-        "reference_product_index",
-        "reference_product_production_amount",
-        "supply_amount",
-        "cumulative_score",
-        "direct_emissions_score",
-    ]
-    equal_dict(a, b, FIELDS)
+from bw_graph_tools import NewNodeEachVisitGraphTraversal
+from bw_graph_tools.testing import node_equal_dict, flow_equal_dict, edge_equal_dict
 
 
 @bw2test
