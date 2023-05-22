@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.3] - 2023-05-22
+
+* Fix scikit-network dependency as API changed in new version
+
 ## [0.2.2] - 2023-05-08
 
 * Refactor some testing functions
