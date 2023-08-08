@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.5] - 2023-08-08
+
+* Updated CI scripts
+
 ## [0.2.4] - 2023-08-08
 
 * Fix [#8: `traverse_edges` returns when values below cutoff or excluded](https://github.com/brightway-lca/bw_graph_tools/issues/8)
