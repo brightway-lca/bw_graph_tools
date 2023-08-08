@@ -29,6 +29,22 @@ $ pip install bw_graph_tools
 
 Packages are also on conda at the [channel cmutel](https://anaconda.org/cmutel/bw_graph_tools).
 
+## Usage
+
+`bw_graph_tools` has three main components: A graph traversal class `NewNodeEachVisitGraphTraversal`; a function to guess production exchanges using only `bw_processing` datapackages `guess_production_exchanges`; and a function to find the path from node `A` to node `B` with the largest amount of the reference product of `A`, `get_path_from_matrix` and it's sister `path_as_brightway_objects`.
+
+### `NewNodeEachVisitGraphTraversal`
+
+Normally we construct matrices and solve the resulting set of linear equations to get a life cycle inventory or impact assessment result. The matrix approach is elegant, in that it simultaneously solves all equations and handles cycles in the graph, and much faster than graph traversal. However, in some cases we want to actually traverse the supply chain graph and calculate the individual impact of visiting nodes at that point in the graph. Graph traversal's use cases include:
+
+* Distinguishing between different paths to the same object
+
+* Convolving temporal distributions
+
+If we add temporal information using `bw_temporalis`, then the same node can occur at different times depending on how the temporal dynamics its preceding path. For example:
+
+
+
 ## Contributing
 
 Contributions are very welcome.
