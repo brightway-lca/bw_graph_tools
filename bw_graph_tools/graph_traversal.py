@@ -457,7 +457,7 @@ class NewNodeEachVisitGraphTraversal:
             producer_index = production_exchange_mapping[product_index]
 
             if producer_index in static_activity_indices:
-                return
+                continue
 
             supply = caching_solver(product_index, product_amount)
             cumulative_score = float((characterized_biosphere * supply).sum())
@@ -467,7 +467,7 @@ class NewNodeEachVisitGraphTraversal:
             scale = product_amount / reference_product_net_production_amount
 
             if abs(cumulative_score) < cutoff_score:
-                return
+                continue
 
             producing_node = Node(
                 unique_id=next(calculation_count),
