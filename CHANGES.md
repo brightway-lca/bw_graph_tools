@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.4] - 2023-08-08
+
+* Fix [#8: `traverse_edges` returns when values below cutoff or excluded](https://github.com/brightway-lca/bw_graph_tools/issues/8)
+
 ## [0.2.3] - 2023-05-22
 
 * Fix scikit-network dependency as API changed in new version
