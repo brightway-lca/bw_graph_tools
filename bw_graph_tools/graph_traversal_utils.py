@@ -2,9 +2,9 @@ from typing import List, Optional
 
 from bw2calc import LCA
 from scipy import sparse
-import sknetwork as skn
 
 from .matrix_tools import to_normalized_adjacency_matrix
+from .shortest_path import get_shortest_path
 
 try:
     import bw2data as bd
@@ -29,7 +29,7 @@ def get_path_from_matrix(
     ``algorithm`` should be either ``BF`` (Bellman-Ford) or ``J`` (Johnson). Dijkstra is not recommended as we have negative weights.
 
     Returns a list like ``[source, int, int, int, target]``."""
-    return skn.path.get_shortest_path(
+    return get_shortest_path(
         adjacency=to_normalized_adjacency_matrix(matrix=matrix),
         sources=source,
         targets=target,
@@ -48,7 +48,7 @@ def path_as_brightway_objects(
         lca = LCA({source_node: 1, target_node: 1})
         lca.lci()
 
-    path = skn.path.get_shortest_path(
+    path = get_shortest_path(
         adjacency=to_normalized_adjacency_matrix(matrix=lca.technosphere_mm.matrix),
         sources=lca.activity_dict[source_node.id],
         targets=lca.activity_dict[target_node.id],
