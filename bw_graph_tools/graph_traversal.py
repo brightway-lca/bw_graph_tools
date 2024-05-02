@@ -240,8 +240,8 @@ class NewNodeEachVisitGraphTraversal:
             traverse
         functional_unit_unique_id : int
             An integer id we can use for the functional unit virtual activity.
-            Shouldn't overlap any other activity ids. Don't change unless you r
-            eally know what you are doing.
+            Shouldn't overlap any other activity ids. Don't change unless you 
+            really know what you are doing.
 
         Returns
         -------
