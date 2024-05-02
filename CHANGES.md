@@ -1,4 +1,4 @@
-# bw_graph_tools Changelog
+# `bw_graph_tools` Changelog
 
 All notable changes to this project will be documented in this file.
 

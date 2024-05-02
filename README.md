@@ -44,7 +44,6 @@ Normally we construct matrices and solve the resulting set of linear equations t
 If we add temporal information using `bw_temporalis`, then the same node can occur at different times depending on how the temporal dynamics its preceding path. For example:
 
 
-
 ## Contributing
 
 Contributions are very welcome.
@@ -62,15 +61,9 @@ please [file an issue] along with a detailed description.
 
 ## Documentation
 
-1. Install the `sphinx-furo` conda environment from the file `.docs/environment.yml`.
-2. Build the documentation locally by running
+1. Install the conda environment from the file `.docs/environment.yml`
+2. Build the documentation locally by running:
 
-```
+```bash
 sphinx-autobuild docs _build/html -a -j auto --open-browser
 ```
-
-<!-- github-only -->
-
-[command-line reference]: https://bw_graph_tools.readthedocs.io/en/latest/usage.html
-[license]: https://github.com/brightway-lca/bw_graph_tools/blob/main/LICENSE
-[contributor guide]: https://github.com/brightway-lca/bw_graph_tools/blob/main/CONTRIBUTING.md

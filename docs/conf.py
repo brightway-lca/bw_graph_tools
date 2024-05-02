@@ -1,23 +1,15 @@
 ### import setup ##################################################################################
 
 import datetime
-import importlib.metadata
-import os
-import shutil
-from sphinx.ext import apidoc
 
 ### project information ###########################################################################
 
-project = "bw_graph_tools"
-author = "Chris Mutel"
-copyright = datetime.date.today().strftime("%Y") + ' Chris Mutel'
+project = "Brightway Graph Tools"
+author = "Brightway Developers"
+copyright = datetime.date.today().strftime("%Y") + ' Brightway Developers'
 
 ### project configuration #########################################################################
 
-needs_sphinx = '5.3.0'
-
-# Add any Sphinx extension module names here, as strings. They can be extensions
-# coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = [
     # native extensions
     'sphinx.ext.autodoc',
@@ -27,16 +19,43 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.extlinks',
     'sphinx.ext.napoleon',
+    # theme
+    'sphinx_rtd_theme',
     # Markdown support
     'myst_parser',
     # API documentation support
     'autoapi',
+    # responsive web component support
+    'sphinx_design',
+    # copy button on code blocks
+    "sphinx_copybutton",
 ]
 
 exclude_patterns = ['_build']
 
 # The master toctree document.
 master_doc = 'index'
+
+### theme configuration ############################################################################
+
+html_theme = "sphinx_rtd_theme"
+html_title = "Brightway Graph Tools"
+html_show_sphinx = False
+
+html_theme_options = {
+    'logo_only': False,
+    'display_version': True,
+    'prev_next_buttons_location': 'bottom',
+    # Toc options
+    'collapse_navigation': True,
+    'sticky_navigation': True,
+    'navigation_depth': 4,
+    'includehidden': True,
+    'titles_only': False
+}
+
+html_logo = 'https://raw.githubusercontent.com/brightway-lca/brightway-documentation/main/source/_static/logo/BW_all_white_transparent_landscape_wide.svg'
+html_favicon = 'https://github.com/brightway-lca/brightway-documentation/blob/main/source/_static/logo/BW_favicon_500x500.png'
 
 ### extension configuration ########################################################################
 
@@ -67,12 +86,11 @@ autoapi_options = [
     'show-module-summary',
     #'special-members',
     #'imported-members',
-    'show-inheritance-diagram'
 ]
 
 autoapi_python_class_content = 'both'
 autoapi_member_order = 'groupwise'
-autoapi_root = 'pages/api'
+autoapi_root = 'content/api'
 autoapi_keep_files = False
 
 autoapi_dirs = [
