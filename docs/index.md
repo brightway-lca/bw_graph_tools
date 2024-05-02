@@ -12,8 +12,8 @@ hidden:
 maxdepth: 1
 ---
 self
+content/api/index
 content/usage
-content/api
 content/changelog
 content/contributing
 content/codeofconduct

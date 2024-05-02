@@ -51,7 +51,7 @@ html_theme_options = {
     'sticky_navigation': True,
     'navigation_depth': 4,
     'includehidden': True,
-    'titles_only': False
+    'titles_only': True
 }
 
 html_logo = 'https://raw.githubusercontent.com/brightway-lca/brightway-documentation/main/source/_static/logo/BW_all_white_transparent_landscape_wide.svg'
@@ -84,8 +84,6 @@ autoapi_options = [
     'private-members',
     'show-inheritance',
     'show-module-summary',
-    #'special-members',
-    #'imported-members',
 ]
 
 autoapi_python_class_content = 'both'
