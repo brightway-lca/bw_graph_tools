@@ -96,8 +96,8 @@ def test_gpe_first_heuristic_single_dp():
         matrix="test",
     )
     row, col = gpe_first_heuristic(mm)
-    assert np.array_equal(np.array([1, 0]), row)
-    assert np.array_equal(np.array([1, 0]), col)
+    assert np.array_equal(np.array([0, 1]), row)
+    assert np.array_equal(np.array([0, 1]), col)
 
 
 def test_gpe_first_heuristic_multiple_dp():
@@ -170,8 +170,8 @@ def test_gpe_first_heuristic_multiple_dp_one_empty():
         matrix="test",
     )
     row, col = gpe_first_heuristic(mm)
-    assert np.array_equal(np.array([1, 0]), row)
-    assert np.array_equal(np.array([1, 0]), col)
+    assert np.array_equal(np.array([0, 1]), row)
+    assert np.array_equal(np.array([0, 1]), col)
 
 
 def test_gpe_first_heuristic_mix_product_no_product():
@@ -228,3 +228,55 @@ def test_gpe_first_heuristic_multiple_always_split_products():
     row, col = gpe_first_heuristic(mm)
     assert row.shape == (0,)
     assert col.shape == (0,)
+
+
+def test_gpe_first_heuristic_same_but_not_diagonal_in_matrix():
+    dp1 = bwp.create_datapackage()
+    data = np.array([1, -0.05, 1])
+    indices = np.array(
+        [
+            (10, 10),
+            (10, 10),
+            (0, 21),
+        ],
+        dtype=bwp.INDICES_DTYPE,
+    )
+    dp1.add_persistent_vector(
+        matrix="test",
+        indices_array=indices,
+        name="foo",
+        data_array=data,
+    )
+    mm = mu.MappedMatrix(
+        packages=[dp1],
+        matrix="test",
+    )
+    row, col = gpe_first_heuristic(mm)
+    assert np.allclose(row, [1])
+    assert np.allclose(col, [0])
+
+
+def test_gpe_first_heuristic_self_consumption():
+    dp1 = bwp.create_datapackage()
+    data = np.array([1, -0.05, 1])
+    indices = np.array(
+        [
+            (1, 1),
+            (1, 1),
+            (2, 2),
+        ],
+        dtype=bwp.INDICES_DTYPE,
+    )
+    dp1.add_persistent_vector(
+        matrix="test",
+        indices_array=indices,
+        name="foo",
+        data_array=data,
+    )
+    mm = mu.MappedMatrix(
+        packages=[dp1],
+        matrix="test",
+    )
+    row, col = gpe_first_heuristic(mm)
+    assert row.shape == (2,)
+    assert col.shape == (2,)

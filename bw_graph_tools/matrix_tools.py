@@ -67,8 +67,19 @@ def gpe_first_heuristic(mm: mu.MappedMatrix) -> Tuple[np.ndarray, np.ndarray]:
         # Need to check the original input values, not after mapping when they are
         # normalized to [0, X] range.
         ident_mask = indices["row"] == indices["col"]
-        row_mapped = group.row_mapper.map_array(indices["row"][ident_mask])
-        col_mapped = group.col_mapper.map_array(indices["col"][ident_mask])
+
+        # In theory these values should be on the diagonal, as the input row and col
+        # values are the same. However, we don't have a strong guarantee that this is
+        # true. So to eliminate duplicate values we combine to a (X, 2) array, and get
+        # unique rows.
+        # Note that `unique` also does sorting, see 
+        # https://stackoverflow.com/questions/16970982/find-unique-rows-in-numpy-array
+        combined = np.unique(np.vstack((
+            group.row_mapper.map_array(indices["row"][ident_mask]),
+            group.col_mapper.map_array(indices["col"][ident_mask])
+        )), axis=1)
+        row_mapped = combined[0, :]
+        col_mapped = combined[1, :]
 
         if (row_mapped == -1).sum() or (col_mapped == -1).sum():
             ERROR = """
