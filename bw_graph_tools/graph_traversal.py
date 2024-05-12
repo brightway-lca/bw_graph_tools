@@ -2,6 +2,7 @@ import warnings
 from dataclasses import dataclass
 from functools import lru_cache
 from heapq import heappop, heappush
+from typing import Optional
 
 from bw2calc import LCA
 from scipy.sparse import spmatrix
@@ -176,13 +177,13 @@ class NewNodeEachVisitGraphTraversal:
     def calculate(
         cls,
         lca_object: LCA,
-        cutoff: float | None = 5e-3,
-        biosphere_cutoff: float | None = 1e-4,
-        max_calc: int | None = 1e5,
-        skip_coproducts: bool | None = False,
-        separate_biosphere_flows: bool | None = True,
-        static_activity_indices: set[int] | None = set(),
-        functional_unit_unique_id: int | None = -1,
+        cutoff: Optional[float] = 5e-3,
+        biosphere_cutoff: Optional[float] = 1e-4,
+        max_calc: Optional[int] = 10000,
+        skip_coproducts: Optional[bool] = False,
+        separate_biosphere_flows: Optional[bool] = True,
+        static_activity_indices: Optional[set[int]] = set(),
+        functional_unit_unique_id: Optional[int] = -1,
     ) -> dict:
         """
         Priority-first traversal (i.e. follow the past of highest score) of the supply chain graph. This class unrolls

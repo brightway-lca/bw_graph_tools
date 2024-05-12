@@ -1,10 +1,11 @@
 from numbers import Number
+from typing import Union
 import numpy as np
 
 from . import Node, Edge, Flow
 
 
-def equal_dict(a: Node | Edge | Flow, b: dict, fields: list[str]):
+def equal_dict(a: Union[Node, Edge, Flow], b: dict, fields: list[str]):
     for field in fields:
         if field in b:
             if isinstance(b[field], Number):
