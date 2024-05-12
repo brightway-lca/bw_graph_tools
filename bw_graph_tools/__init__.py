@@ -11,7 +11,7 @@ __all__ = (
     "to_normalized_adjacency_matrix",
 )
 
-__version__ = "0.3"
+__version__ = "0.3.1"
 
 from .graph_traversal_utils import get_path_from_matrix, path_as_brightway_objects
 from .matrix_tools import guess_production_exchanges, to_normalized_adjacency_matrix
