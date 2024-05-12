@@ -46,6 +46,7 @@ tracker = "https://github.com/brightway-lca/bw_graph_tools/issues"
 # seems to work, at least for now
 testing = [
     "bw_graph_tools",
+    "bw2data",
     "pytest",
     "pytest-cov",
     "python-coveralls",
