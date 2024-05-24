@@ -69,6 +69,8 @@ class Node:
         The technosphere matrix row index of this activity's reference product
     reference_product_production_amount : float
         The *net* production amount of this activity's reference product
+    depth : int
+        Depth in the supply chain graph, starting from 0 as the functional unit
     supply_amount : float
         The amount of the *activity* (not reference product!) needed to supply the demand from the
         requesting supply chain edge.
@@ -95,6 +97,7 @@ class Node:
     reference_product_datapackage_id: int
     reference_product_index: int
     reference_product_production_amount: float
+    depth: int
     supply_amount: float
     cumulative_score: float
     direct_emissions_score: float
@@ -206,6 +209,7 @@ class NewNodeEachVisitGraphTraversal:
         cutoff: Optional[float] = 5e-3,
         biosphere_cutoff: Optional[float] = 1e-4,
         max_calc: Optional[int] = 10000,
+        max_depth: Optional[int] = None,
         skip_coproducts: Optional[bool] = False,
         separate_biosphere_flows: Optional[bool] = True,
         static_activity_indices: Optional[set[int]] = set(),
@@ -282,6 +286,8 @@ class NewNodeEachVisitGraphTraversal:
             added. Fraction of total score.
         max_calc : int
             Maximum number of inventory calculations to perform
+        max_depth : int
+            Maximum depth in the supply chain traversal. Default is no maximum.
         skip_coproducts : bool
             Don't traverse co-production edges, i.e. production edges other
             than the reference product
@@ -325,6 +331,7 @@ class NewNodeEachVisitGraphTraversal:
                 reference_product_datapackage_id=functional_unit_unique_id,
                 reference_product_index=functional_unit_unique_id,
                 reference_product_production_amount=1.0,
+                depth=0,
                 supply_amount=1.0,
                 cumulative_score=lca_object.score,
                 direct_emissions_score=0.0,
@@ -337,6 +344,8 @@ class NewNodeEachVisitGraphTraversal:
             product_indices=[lca_object.dicts.product[key] for key in lca_object.demand],
             product_amounts=lca_object.demand.values(),
             lca=lca_object,
+            current_depth=0,
+            max_depth=max_depth,
             calculation_count=calculation_count,
             characterized_biosphere=characterized_biosphere,
             matrix=technosphere_matrix,
@@ -358,6 +367,7 @@ class NewNodeEachVisitGraphTraversal:
             edges=edges,
             flows=flows,
             max_calc=max_calc,
+            max_depth=max_depth,
             cutoff_score=cutoff_score,
             characterized_biosphere=characterized_biosphere,
             calculation_count=calculation_count,
@@ -389,9 +399,10 @@ class NewNodeEachVisitGraphTraversal:
     def traverse(
         cls,
         heap: list,
-        nodes: dict[Node],
+        nodes: dict[int, Node],
         edges: list[Edge],
         flows: list[Flow],
+        max_depth: Optional[int],
         max_calc: int,
         cutoff_score: float,
         characterized_biosphere: spmatrix,
@@ -418,6 +429,8 @@ class NewNodeEachVisitGraphTraversal:
             List of visited `Edges`
         flows : list
             List of significant seen `Flows`
+        max_depth : int
+            Maximum depth in the supply chain traversal. Default is no maximum.
         max_calc : int
             Maximum number of inventory calculations to perform
         cutoff_score : float
@@ -473,6 +486,8 @@ class NewNodeEachVisitGraphTraversal:
                 product_indices=product_indices,
                 product_amounts=product_amounts,
                 lca=lca,
+                current_depth=node.depth,
+                max_depth=max_depth,
                 calculation_count=calculation_count,
                 characterized_biosphere=characterized_biosphere,
                 matrix=technosphere_matrix,
@@ -496,6 +511,8 @@ class NewNodeEachVisitGraphTraversal:
         product_indices: list[int],
         product_amounts: list[float],
         lca: LCA,
+        current_depth: int,
+        max_depth: int,
         calculation_count: Counter,
         characterized_biosphere: spmatrix,
         matrix: spmatrix,
@@ -532,6 +549,7 @@ class NewNodeEachVisitGraphTraversal:
                 reference_product_index=product_index,
                 reference_product_production_amount=reference_product_net_production_amount,
                 supply_amount=scale,
+                depth=current_depth + 1,
                 cumulative_score=cumulative_score,
                 direct_emissions_score=(scale * characterized_biosphere[:, producer_index]).sum(),
             )
@@ -564,8 +582,10 @@ class NewNodeEachVisitGraphTraversal:
                 producing_node.cumulative_score - flow_score
             )
 
-            heappush(heap, (abs(1 / cumulative_score), producing_node))
             nodes[producing_node.unique_id] = producing_node
+
+            if (max_depth is None) or (producing_node.depth < max_depth):
+                heappush(heap, (abs(1 / cumulative_score), producing_node))
 
     @classmethod
     def get_characterized_biosphere(cls, lca: LCA) -> spmatrix:

@@ -121,13 +121,14 @@ def test_basic_traversal():
 
     gtr = NewNodeEachVisitGraphTraversal.calculate(
         lca_object=lca,
-        max_calc=3,
+        max_depth=2,
         cutoff=0.001,
     )
     edges, flows, nodes = gtr["edges"], gtr["flows"], gtr["nodes"]
 
-    assert len(edges) == 6
-    assert len(nodes) == 7
+    assert len(edges) == 3
+    assert len(nodes) == 4
+    assert len(flows) == 4
 
     expected_flows = [
         {
@@ -149,24 +150,6 @@ def test_basic_traversal():
             "score": 4.0,
         },
         {
-            "activity_id": 4,
-            "activity_index": 1,
-            "activity_unique_id": 3,
-            "amount": 2.0,
-            "flow_datapackage_id": 1,
-            "flow_index": 0,
-            "score": 4.0,
-        },
-        {
-            "activity_id": 3,
-            "activity_index": 0,
-            "activity_unique_id": 4,
-            "amount": 1.0,
-            "flow_datapackage_id": 1,
-            "flow_index": 0,
-            "score": 2.0,
-        },
-        {
             "activity_id": 5,
             "activity_index": 2,
             "activity_unique_id": 2,
@@ -183,24 +166,6 @@ def test_basic_traversal():
             "flow_datapackage_id": 2,
             "flow_index": 1,
             "score": 0.16,
-        },
-        {
-            "activity_id": 5,
-            "activity_index": 2,
-            "activity_unique_id": 5,
-            "amount": 0.08,
-            "flow_datapackage_id": 2,
-            "flow_index": 1,
-            "score": 0.16,
-        },
-        {
-            "activity_id": 4,
-            "activity_index": 1,
-            "activity_unique_id": 3,
-            "amount": 0.04,
-            "flow_datapackage_id": 2,
-            "flow_index": 1,
-            "score": 0.08,
         },
     ]
     for a, b in zip(flows, expected_flows):
@@ -231,30 +196,6 @@ def test_basic_traversal():
             "producer_unique_id": 2,
             "product_index": 2,
         },
-        {
-            "amount": 4.0,
-            "consumer_index": 0,
-            "consumer_unique_id": 1,
-            "producer_index": 1,
-            "producer_unique_id": 3,
-            "product_index": 1,
-        },
-        {
-            "amount": 4.0,
-            "consumer_index": 1,
-            "consumer_unique_id": 3,
-            "producer_index": 0,
-            "producer_unique_id": 4,
-            "product_index": 0,
-        },
-        {
-            "amount": 8.0,
-            "consumer_index": 1,
-            "consumer_unique_id": 3,
-            "producer_index": 2,
-            "producer_unique_id": 5,
-            "product_index": 2,
-        },
     ]
 
     for a, b in zip(edges, expected_edges):
@@ -269,6 +210,7 @@ def test_basic_traversal():
             "direct_emissions_score_outside_specific_flows": 0.0,
             "reference_product_datapackage_id": -1,
             "reference_product_index": -1,
+            "depth": 0,
             "reference_product_production_amount": 1.0,
             "remaining_cumulative_score_outside_specific_flows": 0.0,
             "supply_amount": 1.0,
@@ -283,6 +225,7 @@ def test_basic_traversal():
             "direct_emissions_score_outside_specific_flows": 0.0,
             "reference_product_datapackage_id": 4,
             "reference_product_index": 1,
+            "depth": 1,
             "reference_product_production_amount": 2.0,
             "remaining_cumulative_score_outside_specific_flows": 16.8,
             "supply_amount": 4.0,
@@ -297,6 +240,7 @@ def test_basic_traversal():
             "direct_emissions_score_outside_specific_flows": 0.0,
             "reference_product_datapackage_id": 3,
             "reference_product_index": 0,
+            "depth": 2,
             "reference_product_production_amount": 2.0,
             "remaining_cumulative_score_outside_specific_flows": 12.48,
             "supply_amount": 4.0,
@@ -311,53 +255,12 @@ def test_basic_traversal():
             "direct_emissions_score_outside_specific_flows": 0.0,
             "reference_product_datapackage_id": 5,
             "reference_product_index": 2,
+            "depth": 2,
             "reference_product_production_amount": 1.0,
             "remaining_cumulative_score_outside_specific_flows": 0.0,
             "supply_amount": 16.0,
             "terminal": True,
             "unique_id": 2,
-        },
-        {
-            "activity_datapackage_id": 4,
-            "activity_index": 1,
-            "cumulative_score": 12.48,
-            "direct_emissions_score": 4.08,
-            "direct_emissions_score_outside_specific_flows": 0.0,
-            "reference_product_datapackage_id": 4,
-            "reference_product_index": 1,
-            "reference_product_production_amount": 2.0,
-            "remaining_cumulative_score_outside_specific_flows": 8.4,
-            "supply_amount": 2.0,
-            "terminal": False,
-            "unique_id": 3,
-        },
-        {
-            "activity_datapackage_id": 3,
-            "activity_index": 0,
-            "cumulative_score": 8.24,
-            "direct_emissions_score": 2.0,
-            "direct_emissions_score_outside_specific_flows": 0.0,
-            "reference_product_datapackage_id": 3,
-            "reference_product_index": 0,
-            "reference_product_production_amount": 2.0,
-            "remaining_cumulative_score_outside_specific_flows": 6.24,
-            "supply_amount": 2.0,
-            "terminal": True,
-            "unique_id": 4,
-        },
-        {
-            "activity_datapackage_id": 5,
-            "activity_index": 2,
-            "cumulative_score": 0.1599999964237213,
-            "direct_emissions_score": 0.1599999964237213,
-            "direct_emissions_score_outside_specific_flows": 0.0,
-            "reference_product_datapackage_id": 5,
-            "reference_product_index": 2,
-            "reference_product_production_amount": 1.0,
-            "remaining_cumulative_score_outside_specific_flows": 0.0,
-            "supply_amount": 8.0,
-            "terminal": True,
-            "unique_id": 5,
         },
     ]
     for a in expected_nodes:
