@@ -36,16 +36,23 @@ OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISE
 OF THE POSSIBILITY OF SUCH DAMAGE.
 
 """
+
 from functools import partial
 from multiprocessing import Pool
-from typing import Optional, Union, Iterable
+from typing import Iterable, Optional, Union
 
 import numpy as np
 from scipy import sparse
 
 
-def get_distances(adjacency: sparse.csr_matrix, sources: Optional[Union[int, Iterable]] = None, method: str = 'D',
-                  return_predecessors: bool = False, unweighted: bool = False, n_jobs: Optional[int] = None):
+def get_distances(
+    adjacency: sparse.csr_matrix,
+    sources: Optional[Union[int, Iterable]] = None,
+    method: str = "D",
+    return_predecessors: bool = False,
+    unweighted: bool = False,
+    n_jobs: Optional[int] = None,
+):
     """Compute distances between nodes.
 
     * Graphs
@@ -88,28 +95,40 @@ def get_distances(adjacency: sparse.csr_matrix, sources: Optional[Union[int, Ite
 
     """
     n_jobs, directed = 1, True
-    if method == 'FW' and n_jobs != 1:
-        raise ValueError('The Floyd-Warshall algorithm cannot be used with parallel computations.')
+    if method == "FW" and n_jobs != 1:
+        raise ValueError("The Floyd-Warshall algorithm cannot be used with parallel computations.")
     if sources is None:
         sources = np.arange(adjacency.shape[0])
     elif np.issubdtype(type(sources), np.integer):
         sources = np.array([sources])
     n = len(sources)
-    local_function = partial(sparse.csgraph.shortest_path,
-                             adjacency, method, directed, return_predecessors, unweighted, False)
+    local_function = partial(
+        sparse.csgraph.shortest_path,
+        adjacency,
+        method,
+        directed,
+        return_predecessors,
+        unweighted,
+        False,
+    )
     if n_jobs == 1 or n == 1:
         try:
-            res = sparse.csgraph.shortest_path(adjacency, method, directed, return_predecessors,
-                                               unweighted, False, sources)
+            res = sparse.csgraph.shortest_path(
+                adjacency, method, directed, return_predecessors, unweighted, False, sources
+            )
         except sparse.csgraph.NegativeCycleError:
-            raise ValueError("The shortest path computation could not be completed because a negative cycle is present.")
+            raise ValueError(
+                "The shortest path computation could not be completed because a negative cycle is present."
+            )
     else:
         try:
             with Pool(n_jobs) as pool:
                 res = np.array(pool.map(local_function, sources))
         except sparse.csgraph.NegativeCycleError:
             pool.terminate()
-            raise ValueError("The shortest path computation could not be completed because a negative cycle is present.")
+            raise ValueError(
+                "The shortest path computation could not be completed because a negative cycle is present."
+            )
     if return_predecessors:
         res[1][res[1] < 0] = -1
         if n == 1:
@@ -123,8 +142,14 @@ def get_distances(adjacency: sparse.csr_matrix, sources: Optional[Union[int, Ite
             return res
 
 
-def get_shortest_path(adjacency: sparse.csr_matrix, sources: Union[int, Iterable], targets: Union[int, Iterable],
-                      method: str = 'D', unweighted: bool = False, n_jobs: Optional[int] = None):
+def get_shortest_path(
+    adjacency: sparse.csr_matrix,
+    sources: Union[int, Iterable],
+    targets: Union[int, Iterable],
+    method: str = "D",
+    unweighted: bool = False,
+    n_jobs: Optional[int] = None,
+):
     """Compute the shortest paths in the graph.
 
     Parameters
@@ -181,7 +206,8 @@ def get_shortest_path(adjacency: sparse.csr_matrix, sources: Union[int, Iterable
         targets = sources
     else:
         raise ValueError(
-            'This request is ambiguous. Either use one source and multiple targets or multiple sources and one target.')
+            "This request is ambiguous. Either use one source and multiple targets or multiple sources and one target."
+        )
 
     if source2target:
         dists, preds = get_distances(adjacency, source, method, True, unweighted, n_jobs)

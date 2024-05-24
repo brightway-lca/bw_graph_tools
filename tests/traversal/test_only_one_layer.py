@@ -4,7 +4,7 @@ from bw2data import Database, Method
 from bw2data.tests import bw2test
 
 from bw_graph_tools import NewNodeEachVisitGraphTraversal
-from bw_graph_tools.testing import node_equal_dict, flow_equal_dict, edge_equal_dict
+from bw_graph_tools.testing import edge_equal_dict, flow_equal_dict, node_equal_dict
 
 
 @bw2test

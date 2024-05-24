@@ -1,8 +1,9 @@
 from numbers import Number
 from typing import Union
+
 import numpy as np
 
-from . import Node, Edge, Flow
+from . import Edge, Flow, Node
 
 
 def equal_dict(a: Union[Node, Edge, Flow], b: dict, fields: list[str]):
