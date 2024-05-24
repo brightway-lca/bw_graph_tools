@@ -11,7 +11,7 @@ __all__ = (
     "to_normalized_adjacency_matrix",
 )
 
-__version__ = "0.3.1"
+__version__ = "0.4"
 
 from .graph_traversal import (
     AssumedDiagonalGraphTraversal,
