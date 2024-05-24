@@ -52,7 +52,8 @@ class Counter:
 @dataclass
 class Node:
     """
-    A visited activity in a supply chain graph. Although our graph is cyclic, we treat each activity as a separate node every time we visit it.
+    A visited activity in a supply chain graph. Although our graph is cyclic, we treat each
+    activity as a separate node every time we visit it.
 
     Parameters
     ----------
@@ -69,15 +70,20 @@ class Node:
     reference_product_production_amount : float
         The *net* production amount of this activity's reference product
     supply_amount : float
-        The amount of the *activity* (not reference product!) needed to supply the demand from the requesting supply chain edge.
+        The amount of the *activity* (not reference product!) needed to supply the demand from the
+        requesting supply chain edge.
     cumulative_score : float
-        Total LCIA score attributed to `supply_amount` of this activity, including impacts from direct emissions.
+        Total LCIA score attributed to `supply_amount` of this activity, including impacts from
+        direct emissions.
     direct_emissions_score : float
-        Total LCIA score attributed only to the direct characterized biosphere flows of `supply_amount` of this activity.
+        Total LCIA score attributed only to the direct characterized biosphere flows of
+        `supply_amount` of this activity.
     direct_emissions_score_outside_specific_flows : float
-        The score attributable to *direct emissions* of this node which isn't broken out into separate `Flow` objects.
+        The score attributable to *direct emissions* of this node which isn't broken out into
+        separate `Flow` objects.
     remaining_cumulative_score_outside_specific_flows : float
-        The *cumulative* score of this node, including direct emissions, which isn't broken out into separate `Flow` objects.
+        The *cumulative* score of this node, including direct emissions, which isn't broken out
+        into separate `Flow` objects.
     terminal : bool
         Boolean flag indicating whether graph traversal was cutoff at this node
 
@@ -104,7 +110,8 @@ class Node:
 @dataclass
 class Edge:
     """
-    An edge between two *activities*. The `amount` is the amount of the product demanded by the `consumer`.
+    An edge between two *activities*. The `amount` is the amount of the product demanded by the
+    `consumer`.
 
     Parameters
     ----------
@@ -119,7 +126,8 @@ class Edge:
     product_index : int
         The matrix row index of the consumed product
     amount : float
-        The amount of the product demanded by the consumer. Not scaled to producer production amount.
+        The amount of the product demanded by the consumer. Not scaled to producer production
+        amount.
     """
 
     consumer_index: int
@@ -170,15 +178,24 @@ class NewNodeEachVisitGraphTraversal:
     """
     Traverse a supply chain, following paths of greatest impact.
 
-    This implementation uses a queue of datasets to assess. As the supply chain is traversed, activities are added to a list sorted by LCA score. Each activity in the sorted list is assessed, and added to the supply chain graph, as long as its impact is above a certain threshold, and the maximum number of calculations has not been exceeded.
+    This implementation uses a queue of datasets to assess. As the supply chain is traversed,
+    activities are added to a list sorted by LCA score. Each activity in the sorted list is
+    assessed, and added to the supply chain graph, as long as its impact is above a certain
+    threshold, and the maximum number of calculations has not been exceeded.
 
-    Because the next dataset assessed is chosen by its impact, not its position in the graph, this is neither a breadth-first nor a depth-first search, but rather "importance-first".
+    Because the next dataset assessed is chosen by its impact, not its position in the graph, this
+    is neither a breadth-first nor a depth-first search, but rather "importance-first".
 
-    This class is written in a functional style, and the class serves mainly to collect methods which belong together. There are only `classmethods` and no state is stored on the class itself.
+    This class is written in a functional style, and the class serves mainly to collect methods
+    which belong together. There are only `classmethods` and no state is stored on the class
+    itself.
 
-    Should be used by calling the ``calculate`` method. All other functions should be considered an internal API.
+    Should be used by calling the ``calculate`` method. All other functions should be considered an
+    internal API.
 
-    .. warning:: Graph traversal with multioutput processes only works when other inputs are substituted (see `Multioutput processes in LCA <http://chris.mutel.org/multioutput.html>`__ for a description of multiputput process math in LCA).
+    .. warning:: Graph traversal with multioutput processes only works when other inputs are
+        substituted (see `Multioutput processes in LCA <http://chris.mutel.org/multioutput.html>`__
+        for a description of multiputput process math in LCA).
 
     """
 
@@ -195,18 +212,22 @@ class NewNodeEachVisitGraphTraversal:
         functional_unit_unique_id: Optional[int] = -1,
     ) -> dict:
         """
-        Priority-first traversal (i.e. follow the past of highest score) of the supply chain graph. This class unrolls
-        the graph, i.e. every time it arrives at a given activity, it treats
+        Priority-first traversal (i.e. follow the past of highest score) of the supply chain graph.
+        This class unrolls the graph, i.e. every time it arrives at a given activity, it treats
         it as a separate node in the graph.
 
-        In contrast with previous graph traversal implementations, we do not assume reference production exchanges are on the diagonal. It should also correctly handle the following:
+        In contrast with previous graph traversal implementations, we do not assume reference
+        production exchanges are on the diagonal. It should also correctly handle the following:
 
         * Functional unit has more than one link to a given product
         * Non-unitary reference production amounts
         * Negative reference production amounts
-        * Co-production edge traversal, if desired. Requires co-products to be substituted (can be implicit substitution).
+        * Co-production edge traversal, if desired. Requires co-products to be substituted (can be
+            implicit substitution).
 
-        You must provide an `lca_object` which is already instantiated, and for which you have already done LCI and LCIA calculations. The `lca_object` does not have to be an instance of `bw2calc.LCA`, but it needs to support the following methods and attributes:
+        You must provide an `lca_object` which is already instantiated, and for which you have
+        already done LCI and LCIA calculations. The `lca_object` does not have to be an instance of
+        `bw2calc.LCA`, but it needs to support the following methods and attributes:
 
         * `technosphere_matrix`
         * `technosphere_mm`
@@ -214,17 +235,39 @@ class NewNodeEachVisitGraphTraversal:
         * `demand`
         * `demand_array`
 
-        You can subclass `NewNodeEachVisitGraphTraversal` and redefine `get_characterized_biosphere` if your LCA class does not have a traditional `characterization_matrix` and `biosphere_matrix`.
+        You can subclass `NewNodeEachVisitGraphTraversal` and redefine
+        `get_characterized_biosphere` if your LCA class does not have a traditional
+        `characterization_matrix` and `biosphere_matrix`. For example, regionalization has its
+        own characterization framework without a single `characterization_matrix`.
 
-        The return object is a dictionary with four values. The `nodes` is a dictionary of visited **activities**; the keys in this dictionary are unique increasing integer ids (not related to any other ids or indices), and values are instances of the `Node` dataclass. Each `Node` has a `unique_id`, as every time we arrive at an activity (even if we have seen it before via another branch of the supply chain), we create a new `Node` object with a unique id. See the `Node` documentation for its other attributes.
+        The return object is a dictionary with four values.
 
-        edges
-
-        flows
+        * `nodes` is a dictionary of visited **activities**; the keys in this dictionary are
+            unique increasing integer ids (not related to any other ids or indices), and values are
+            instances of the `Node` dataclass. Each `Node` has a `unique_id`, as every time we
+            arrive at an activity (even if we have seen it before via another branch of the supply
+            chain), we create a new `Node` object with a unique id. See the `Node` documentation
+            for its other attributes.
+        * `edges` is a list of `Edge` instances. Edges link two `Node` instances (but not `Flow`
+            instances, that is handled separately). The `Edge` amount is the amount demanded of
+            the producer at that point in the supply chain, scaled to the amount of the producer
+            requested.
+        * `flows` is a list of `Flow` instances; biosphere flows are linked to a particular `Node`.
+            We apply the `biosphere_cutoff` to determine if individual biosphere flows should
+            be stored separately. Will be empty is `separate_biosphere_flows` is false.
 
         Finally, `calculation_count` gives the total number of inventory calculations performed.
 
-        Without further manipulation, the results will have double counting if you add all scores together. Specifically, each `Node` has both a `cumulative_score` and a `direct_emissions_score`; the direct emissions are counted in both scores. Use XXX to subtract `direct_emissions_score` from `cumulative_score`. Moreover, the `direct_emissions_score` includes all characterized flows, but important flows can also be listed separately as `Flow` objects. Use XXX to subtract specific `Flows` from the `direct_emissions_score`.
+        Without further manipulation, the results will have double counting if you add all scores
+        together. Specifically, each `Node` has both a `cumulative_score` and a
+        `direct_emissions_score`; the `cumulative_score` **includes** the `direct_emissions_score`.
+        See the following attributes of the `Node` object to find the numbers you are looking for
+        in your specific case:
+
+        * cumulative_score
+        * direct_emissions_score
+        * direct_emissions_score_outside_specific_flows
+        * remaining_cumulative_score_outside_specific_flows
 
         Parameters
         ----------
@@ -378,7 +421,8 @@ class NewNodeEachVisitGraphTraversal:
         max_calc : int
             Maximum number of inventory calculations to perform
         cutoff_score : float
-            Score below which graph edges are ignored. We always consider the absolute value of edges scores.
+            Score below which graph edges are ignored. We always consider the absolute value of
+            edges scores.
         characterized_biosphere : spmatrix
             The pre-calculated characterization time biosphere matrix
         calculation_count : `Counter`
@@ -387,7 +431,8 @@ class NewNodeEachVisitGraphTraversal:
             A set of activity matrix indices which we don't want the graph to
             traverse
         production_exchange_mapping : dict
-            Mapping of product matrix row indices to the activity matrix column indices for which they are reference products
+            Mapping of product matrix row indices to the activity matrix column indices for which
+            they are reference products
         technosphere_matrix : scipy.sparse.spmatrix
             LCA technosphere matrix
         lca : bw2calc.LCA
@@ -578,7 +623,8 @@ class NewNodeEachVisitGraphTraversal:
         biosphere_cutoff_score: float,
     ) -> float:
         """
-        Add individual biosphere flows as `Flow` instances to `flow` if their score is above `biosphere_cutoff_score`.
+        Add individual biosphere flows as `Flow` instances to `flow` if their score is above
+        `biosphere_cutoff_score`.
 
         Parameters
         ----------
@@ -625,14 +671,16 @@ class NewNodeEachVisitGraphTraversal:
         matrix: spmatrix,
     ) -> (list[int], list[float]):
         """
-        Get input matrix indices and amounts for a given activity. Ignores the reference production exchanges and optionally other co-production exchanges.
+        Get input matrix indices and amounts for a given activity. Ignores the reference production
+        exchanges and optionally other co-production exchanges.
 
         Parameters
         ----------
         node : `Node`
             Activity whose inputs we are iterating over
         skip_coproducts : bool
-            Whether or not to ignore positive production exchanges other than the reference product, which is always ignored
+            Whether or not to ignore positive production exchanges other than the reference
+            product, which is always ignored
         matrix : scipy.sparse.spmatrix
             Technosphere matrix
 
@@ -642,7 +690,8 @@ class NewNodeEachVisitGraphTraversal:
         row indices : list
             Integer row indices for products consumed by `Node`
         amounts : list
-            The amount of each product consumed, scaled to `Node.supply_amount`. Same order as row indices.
+            The amount of each product consumed, scaled to `Node.supply_amount`. Same order as row
+            indices.
 
         """
         matrix = (-1 * node.supply_amount * matrix[:, node.activity_index]).tocoo()
