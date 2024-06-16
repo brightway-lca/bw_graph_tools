@@ -32,7 +32,7 @@ dependencies = [
     "bw2calc>=2.0.dev13",
     "bw_processing",
     "matrix_utils",
-    "numpy<2",
+    "numpy<3",
     "scipy",
 ]
 
