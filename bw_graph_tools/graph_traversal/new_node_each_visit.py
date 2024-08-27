@@ -136,7 +136,9 @@ class NewNodeEachVisitGraphTraversal:
             emissions
         static_activity_indices : set
             A set of activity matrix indices which we don't want the graph to
-            traverse
+            traverse - i.e. we stop traversal when we hit these nodes, but
+            still add them to the returned `nodes` dictionary, and calculate
+            their direct and cumulative scores.
         functional_unit_unique_id : int
             An integer id we can use for the functional unit virtual activity.
             Shouldn't overlap any other activity ids. Don't change unless you
