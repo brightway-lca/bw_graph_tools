@@ -92,6 +92,9 @@ exclude = [
     "docs/conf.py",
 ]
 
+[tool.ruff]
+line-length = 100
+
 [tool.black]
 line-length = 100
 
