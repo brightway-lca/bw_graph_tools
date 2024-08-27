@@ -123,22 +123,6 @@ class SameNodeEachVisitGraphTraversal(NewNodeEachVisitGraphTraversal):
 
         self.traverse_from_node(functional_unit_unique_id, max_depth=max_depth)
 
-    def traversed_node(self, node_id: int) -> bool:
-        """
-        Check wither a node has been traversed
-
-        Parameters
-        ----------
-        node_id
-            node's unique id
-
-        Returns
-        -------
-        bool
-            indicates that the node has been traversed
-        """
-        return node_id in self.visited_nodes
-
     def traverse_from_node(self, node_id: int, max_depth: Optional[int] = None) -> bool:
         """
         Traverse the graph starting from the specified node and exp
