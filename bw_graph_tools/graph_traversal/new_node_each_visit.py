@@ -1,23 +1,109 @@
 import warnings
+from dataclasses import dataclass, field
 from heapq import heappop, heappush
-from typing import Optional, Dict
+from typing import Dict, Optional
 
 import matrix_utils as mu
 import numpy as np
 from bw2calc import LCA
 from scipy.sparse import spmatrix
+from typing_extensions import deprecated
 
 try:
     from bw2data import databases
 except ImportError:
     databases = {}
 
+from .base import BaseGraphTraversal
 from ..matrix_tools import guess_production_exchanges
 from .graph_objects import Node, Edge, Flow
 from .utils import CachingSolver, Counter
 
 
-class NewNodeEachVisitGraphTraversal:
+def get_demand_vector_for_activity(
+    node: Node,
+    skip_coproducts: bool,
+    matrix: spmatrix,
+) -> (list[int], list[float]):
+    """
+    Get input matrix indices and amounts for a given activity. Ignores the reference production
+    exchanges and optionally other co-production exchanges.
+
+    Parameters
+    ----------
+    node : `Node`
+        Activity whose inputs we are iterating over
+    skip_coproducts : bool
+        Whether or not to ignore positive production exchanges other than the reference
+        product, which is always ignored
+    matrix : scipy.sparse.spmatrix
+        Technosphere matrix
+
+    Returns
+    -------
+
+    row indices : list
+        Integer row indices for products consumed by `Node`
+    amounts : list
+        The amount of each product consumed, scaled to `Node.supply_amount`. Same order as row
+        indices.
+
+    """
+    matrix = (-1 * node.supply_amount * matrix[:, node.activity_index]).tocoo()
+
+    rows, vals = [], []
+    for x, y in zip(matrix.row, matrix.data):
+        if x == node.reference_product_index:
+            continue
+        elif y == 0:
+            continue
+        elif y < 0 and skip_coproducts:
+            continue
+        rows.append(x)
+        vals.append(y)
+    return rows, vals
+
+
+@dataclass
+class SupplyChainTraversalSettings:
+    """
+    Supply Chain Traversal Settings
+
+    Parameters
+    ----------
+    cutoff : float
+        Cutoff value used to stop graph traversal. Fraction of total score,
+        should be in `(0, 1)`
+    biosphere_cutoff : float
+        Cutoff value used to determine if a separate biosphere node is
+        added. Fraction of total score.
+    max_calc : int
+        Maximum number of inventory calculations to perform
+    skip_coproducts : bool
+        Don't traverse co-production edges, i.e. production edges other
+        than the reference product
+    separate_biosphere_flows : bool
+        Add separate `Flow` nodes for important individual biosphere
+        emissions
+    """
+
+    cutoff: float = field(default=5e-3)
+    biosphere_cutoff: float = field(default=1e-4)
+    max_calc: int = field(default=10000)
+    skip_coproducts: bool = field(default=False)
+    separate_biosphere_flows: bool = field(default=False)
+
+    def __post_init__(self):
+        # Validate cutoff is between 0 and 1
+        if not (0 < self.cutoff < 1):
+            raise ValueError("cutoff must be a fraction between 0 and 1.")
+
+        # Validate max_calc is a positive integer
+        if self.max_calc <= 0:
+            raise ValueError("max_calc must be a positive integer.")
+
+
+class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[SupplyChainTraversalSettings]):
     """
     Traverse a supply chain, following paths of greatest impact.
 
@@ -29,12 +115,46 @@ class NewNodeEachVisitGraphTraversal:
     Because the next dataset assessed is chosen by its impact, not its position in the graph, this
     is neither a breadth-first nor a depth-first search, but rather "importance-first".
 
-    This class is written in a functional style, and the class serves mainly to collect methods
-    which belong together. There are only `classmethods` and no state is stored on the class
-    itself.
+    Priority-first traversal (i.e. follow the past of highest score) of the supply chain graph.
+    This class unrolls the graph, i.e. every time it arrives at a given activity, it treats
+    it as a separate node in the graph.
 
-    Should be used by calling the ``calculate`` method. All other functions should be considered an
-    internal API.
+    In contrast with previous graph traversal implementations, we do not assume reference
+    production exchanges are on the diagonal. It should also correctly handle the following:
+
+    * Functional unit has more than one link to a given product
+    * Non-unitary reference production amounts
+    * Negative reference production amounts
+    * Co-production edge traversal, if desired. Requires co-products to be substituted (can be
+        implicit substitution).
+
+    You must provide an `lca_object` which is already instantiated, and for which you have
+    already done LCI and LCIA calculations. The `lca_object` does not have to be an instance of
+    `bw2calc.LCA`, but it needs to support the following methods and attributes:
+
+    * `technosphere_matrix`
+    * `technosphere_mm`
+    * `solve_linear_system()`
+    * `demand`
+    * `demand_array`
+
+    You can subclass `NewNodeEachVisitGraphTraversal` and redefine
+    `get_characterized_biosphere` if your LCA class does not have a traditional
+    `characterization_matrix` and `biosphere_matrix`. For example, regionalization has its
+    own characterization framework without a single `characterization_matrix`.
+
+    Without further manipulation, the results will have double counting if you add all scores
+    together. Specifically, each `Node` has both a `cumulative_score` and a
+    `direct_emissions_score`; the `cumulative_score` **includes** the `direct_emissions_score`.
+    See the following attributes of the `Node` object to find the numbers you are looking for
+    in your specific case:
+
+    * cumulative_score
+    * direct_emissions_score
+    * direct_emissions_score_outside_specific_flows
+    * remaining_cumulative_score_outside_specific_flows
+
+
 
     .. warning:: Graph traversal with multioutput processes only works when other inputs are
         substituted (see `Multioutput processes in LCA <http://chris.mutel.org/multioutput.html>`__
@@ -42,7 +162,24 @@ class NewNodeEachVisitGraphTraversal:
 
     """
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        total_score = self.lca.score
+        if total_score == 0:
+            raise ValueError("Zero total LCA score makes traversal impossible")
+
+        self.cutoff_score = abs(total_score * self.settings.cutoff)
+        self.biosphere_cutoff_score = abs(total_score * self.settings.biosphere_cutoff)
+        self.production_exchange_mapping = {
+            x: y for x, y in zip(*self.get_production_exchanges(self.lca.technosphere_mm))
+        }
+        self._calculation_count = Counter()
+        self.characterized_biosphere = self.get_characterized_biosphere(self.lca)
+
     @classmethod
+    @deprecated(
+        "You should instantiate NewNodeEachVisitGraphTraversal instead of calling `calculate`"
+    )
     def calculate(
         cls,
         lca_object: LCA,
@@ -150,200 +287,105 @@ class NewNodeEachVisitGraphTraversal:
             Dictionary with keys `nodes`, `edges`, `flows`, `calculation_counter`
 
         """
-        total_score = lca_object.score
-        if total_score == 0:
-            raise ValueError("Zero total LCA score makes traversal impossible")
-
-        cutoff_score = abs(total_score * cutoff)
-        biosphere_cutoff_score = abs(total_score * biosphere_cutoff)
-        technosphere_matrix = lca_object.technosphere_matrix
-        production_exchange_mapping = {
-            x: y for x, y in zip(*cls.get_production_exchanges(lca_object.technosphere_mm))
-        }
-        heap, edges, flows = [], [], []
-        calculation_count = Counter()
-        characterized_biosphere = cls.get_characterized_biosphere(lca_object)
-        caching_solver = CachingSolver(lca_object)
-
-        nodes = {
-            functional_unit_unique_id: Node(
-                unique_id=functional_unit_unique_id,
-                activity_datapackage_id=functional_unit_unique_id,
-                activity_index=functional_unit_unique_id,
-                reference_product_datapackage_id=functional_unit_unique_id,
-                reference_product_index=functional_unit_unique_id,
-                reference_product_production_amount=1.0,
-                depth=0,
-                supply_amount=1.0,
-                cumulative_score=lca_object.score,
-                direct_emissions_score=0.0,
-            )
-        }
-
-        cls.traverse_edges(
-            consumer_index=functional_unit_unique_id,
-            consumer_unique_id=functional_unit_unique_id,
-            product_indices=[lca_object.dicts.product[key] for key in lca_object.demand],
-            product_amounts=lca_object.demand.values(),
-            lca=lca_object,
-            current_depth=0,
-            max_depth=max_depth,
-            calculation_count=calculation_count,
-            characterized_biosphere=characterized_biosphere,
-            matrix=technosphere_matrix,
-            edges=edges,
-            flows=flows,
-            nodes=nodes,
-            heap=heap,
-            caching_solver=caching_solver,
-            production_exchange_mapping=production_exchange_mapping,
-            separate_biosphere_flows=separate_biosphere_flows,
-            cutoff_score=cutoff_score,
+        instance = cls(
+            lca_object,
+            SupplyChainTraversalSettings(
+                cutoff=cutoff,
+                biosphere_cutoff=biosphere_cutoff,
+                max_calc=max_calc,
+                skip_coproducts=skip_coproducts,
+                separate_biosphere_flows=separate_biosphere_flows,
+            ),
+            functional_unit_unique_id=functional_unit_unique_id,
             static_activity_indices=static_activity_indices,
-            biosphere_cutoff_score=biosphere_cutoff_score,
         )
 
-        cls.traverse(
-            heap=heap,
-            nodes=nodes,
-            edges=edges,
-            flows=flows,
-            max_calc=max_calc,
-            max_depth=max_depth,
-            cutoff_score=cutoff_score,
-            characterized_biosphere=characterized_biosphere,
-            calculation_count=calculation_count,
-            static_activity_indices=static_activity_indices,
-            caching_solver=caching_solver,
-            production_exchange_mapping=production_exchange_mapping,
-            technosphere_matrix=technosphere_matrix,
-            lca=lca_object,
-            skip_coproducts=skip_coproducts,
-            separate_biosphere_flows=separate_biosphere_flows,
-            biosphere_cutoff_score=biosphere_cutoff_score,
-        )
-
-        flows.sort(reverse=True)
-
-        non_terminal_nodes = {edge.consumer_unique_id for edge in edges}
-        for node_id_key in nodes:
-            if node_id_key not in non_terminal_nodes:
-                nodes[node_id_key].terminal = True
+        instance.traverse(max_depth=max_depth)
 
         return {
-            "nodes": nodes,
-            "edges": edges,
-            "flows": flows,
-            "calculation_count": calculation_count.value,
+            "nodes": instance.nodes,
+            "edges": instance.edges,
+            "flows": instance.flows,
+            "calculation_count": instance.calculation_count,
         }
 
-    @classmethod
+    @property
+    def calculation_count(self):
+        """
+        gives the total number of inventory calculations performed.
+        """
+        return self._calculation_count.value
+
     def traverse(
-        cls,
-        heap: list,
-        nodes: dict[int, Node],
-        edges: list[Edge],
-        flows: list[Flow],
-        max_depth: Optional[int],
-        max_calc: int,
-        cutoff_score: float,
-        characterized_biosphere: spmatrix,
-        calculation_count: Counter,
-        static_activity_indices: set,
-        production_exchange_mapping: dict[int, int],
-        technosphere_matrix: spmatrix,
-        lca: LCA,
-        caching_solver: CachingSolver,
-        skip_coproducts: bool,
-        separate_biosphere_flows: bool,
-        biosphere_cutoff_score: float,
+        self,
+        nodes: list = None,
+        max_depth: int = None,
     ) -> None:
         """
         Perform the graph traversal from the initial functional unit edges.
 
         Parameters
         ----------
-        heap : list
-            The `heapq` list of nodes to traverse
-        nodes : dict
-            Dictionary of already visited `Nodes`
-        edges : list
-            List of visited `Edges`
-        flows : list
-            List of significant seen `Flows`
+        nodes : list
+            list of nodes to traverse, otherwise uses the root node as the starting point
         max_depth : int
             Maximum depth in the supply chain traversal. Default is no maximum.
-        max_calc : int
-            Maximum number of inventory calculations to perform
-        cutoff_score : float
-            Score below which graph edges are ignored. We always consider the absolute value of
-            edges scores.
-        characterized_biosphere : spmatrix
-            The pre-calculated characterization time biosphere matrix
-        calculation_count : `Counter`
-            Counter object tracking number of lci calculations
-        static_activity_indices : set
-            A set of activity matrix indices which we don't want the graph to
-            traverse
-        production_exchange_mapping : dict
-            Mapping of product matrix row indices to the activity matrix column indices for which
-            they are reference products
-        technosphere_matrix : scipy.sparse.spmatrix
-            LCA technosphere matrix
-        lca : bw2calc.LCA
-            Already instantiated `LCA` object with inventory and impact
-            assessment calculated.
-        caching_solver : `CachingSolver`
-            Solver which caches solutions to linear algebra problems
-        skip_coproducts : bool
-            Don't traverse co-production edges, i.e. production edges other
-            than the reference product
-        separate_biosphere_flows : bool
-            Add separate `Flow` nodes for important individual biosphere
-            emissions
-        biosphere_cutoff_score : float
-            Score below which individual biosphere flows are not added to `flows`
 
         Returns
         -------
         `None`
-            Modifies `heap`, `nodes`, `edges`, and `flows` in-place
+            Modifies the class object's state in-place
 
         """
+        if nodes is None:
+            heap = [(0, self._root_node)]
+        else:
+            heap = [(0, node) for node in nodes]
+
         while heap:
-            if calculation_count > max_calc:
+            if self._calculation_count > self.settings.max_calc:
                 warnings.warn("Stopping traversal due to calculation count.")
                 break
             _, node = heappop(heap)
 
-            product_indices, product_amounts = cls.get_demand_vector_for_activity(
+            product_indices, product_amounts = self.get_demand_vector_for_activity(
                 node=node,
-                skip_coproducts=skip_coproducts,
-                matrix=technosphere_matrix,
+                skip_coproducts=self.settings.skip_coproducts,
+                matrix=self.lca.technosphere_matrix,
             )
 
-            cls.traverse_edges(
+            self.traverse_edges(
                 consumer_index=node.activity_index,
                 consumer_unique_id=node.unique_id,
                 product_indices=product_indices,
                 product_amounts=product_amounts,
-                lca=lca,
+                lca=self.lca,
                 current_depth=node.depth,
                 max_depth=max_depth,
-                calculation_count=calculation_count,
-                characterized_biosphere=characterized_biosphere,
-                matrix=technosphere_matrix,
-                edges=edges,
-                flows=flows,
-                nodes=nodes,
+                calculation_count=self._calculation_count,
+                characterized_biosphere=self.characterized_biosphere,
+                matrix=self.lca.technosphere_matrix,
+                edges=self._edges,
+                flows=self._flows,
+                nodes=self._nodes,
                 heap=heap,
-                caching_solver=caching_solver,
-                static_activity_indices=static_activity_indices,
-                production_exchange_mapping=production_exchange_mapping,
-                separate_biosphere_flows=separate_biosphere_flows,
-                cutoff_score=cutoff_score,
-                biosphere_cutoff_score=biosphere_cutoff_score,
+                caching_solver=self._caching_solver,
+                static_activity_indices=self.static_activity_indices,
+                production_exchange_mapping=self.production_exchange_mapping,
+                separate_biosphere_flows=self.settings.separate_biosphere_flows,
+                cutoff_score=self.cutoff_score,
+                biosphere_cutoff_score=self.biosphere_cutoff_score,
             )
+
+        self._flows.sort(reverse=True)
+
+        non_terminal_nodes = {edge.consumer_unique_id for edge in self._edges}
+        for node_id_key in self._nodes:
+            if node_id_key not in non_terminal_nodes:
+                terminal = True
+            else:
+                terminal = False
+            self.nodes[node_id_key].terminal = terminal
 
     @classmethod
     def traverse_edges(
@@ -525,47 +567,17 @@ class NewNodeEachVisitGraphTraversal:
                 )
         return added_score
 
-    @classmethod
     def get_demand_vector_for_activity(
-        cls,
+        self,
         node: Node,
         skip_coproducts: bool,
         matrix: spmatrix,
     ) -> (list[int], list[float]):
-        """
-        Get input matrix indices and amounts for a given activity. Ignores the reference production
-        exchanges and optionally other co-production exchanges.
+        if node is self._root_node:
+            product_indices = [self.lca.dicts.product[key] for key in self.lca.demand]
+            product_amounts = self.lca.demand.values()
+            return product_indices, product_amounts
 
-        Parameters
-        ----------
-        node : `Node`
-            Activity whose inputs we are iterating over
-        skip_coproducts : bool
-            Whether or not to ignore positive production exchanges other than the reference
-            product, which is always ignored
-        matrix : scipy.sparse.spmatrix
-            Technosphere matrix
-
-        Returns
-        -------
-
-        row indices : list
-            Integer row indices for products consumed by `Node`
-        amounts : list
-            The amount of each product consumed, scaled to `Node.supply_amount`. Same order as row
-            indices.
-
-        """
-        matrix = (-1 * node.supply_amount * matrix[:, node.activity_index]).tocoo()
-
-        rows, vals = [], []
-        for x, y in zip(matrix.row, matrix.data):
-            if x == node.reference_product_index:
-                continue
-            elif y == 0:
-                continue
-            elif y < 0 and skip_coproducts:
-                continue
-            rows.append(x)
-            vals.append(y)
-        return rows, vals
+        return get_demand_vector_for_activity(
+            node=node, skip_coproducts=skip_coproducts, matrix=matrix
+        )
