@@ -322,7 +322,7 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[SupplyChainTraversalSett
         max_depth: int = None,
     ) -> None:
         """
-        Perform the graph traversal from the initial functional unit edges.
+        Perform the graph traversal.
 
         Parameters
         ----------
@@ -385,7 +385,7 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[SupplyChainTraversalSett
                 terminal = True
             else:
                 terminal = False
-            self.nodes[node_id_key].terminal = terminal
+            self._nodes[node_id_key].terminal = terminal
 
     @classmethod
     def traverse_edges(

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import List
 
 
 @dataclass
@@ -56,6 +57,27 @@ class Node:
     direct_emissions_score_outside_specific_flows: float = 0.0
     remaining_cumulative_score_outside_specific_flows: float = 0.0
     terminal: bool = False
+
+    def __lt__(self, other):
+        # Needed for sorting
+        return self.cumulative_score < other.cumulative_score
+
+
+@dataclass
+class GroupedNodes:
+    """
+    A group of nodes
+    """
+    nodes: List[Node]
+    label: str
+    unique_id: int
+    depth: int
+    supply_amount: float
+    cumulative_score: float
+    direct_emissions_score: float
+    direct_emissions_score_outside_specific_flows: float = 0.0
+    terminal: bool = False
+    activity_index: int = None
 
     def __lt__(self, other):
         # Needed for sorting

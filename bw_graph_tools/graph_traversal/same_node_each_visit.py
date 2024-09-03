@@ -14,6 +14,16 @@ class SameNodeEachVisitGraphTraversal(NewNodeEachVisitGraphTraversal):
         super().__init__(*args, **kwargs)
         self.visited_nodes = set()
 
+    def traverse(
+            self,
+            nodes: list = None,
+            max_depth: int = None,
+    ) -> None:
+        super().traverse(nodes=nodes, max_depth=max_depth)
+        for node in self._nodes.values():
+            if node.terminal is False or node is self._root_node:
+                self.visited_nodes.add(node.unique_id)
+
     def traverse_from_node(self, node: Union[int, Node], max_depth: Optional[int] = None) -> bool:
         """
         Traverse the graph starting from the specified node and exp
