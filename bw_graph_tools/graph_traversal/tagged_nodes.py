@@ -43,9 +43,9 @@ class NewNodeEachVisitTaggedGraphTraversal(NewNodeEachVisitGraphTraversal,
         """
         return next(self._calculation_count)
 
-    def should_group_leaves_for_parent(self, parent_node: Node) -> bool:
+    def should_group_leaves(self, parent_node: Node, nodes: List[Node], tag_group: str) -> bool:
         """
-        Whether to group leaves for a specific parent
+        Whether to group leaves for a specific parent and tag group
         """
         return True
 
@@ -71,8 +71,6 @@ class NewNodeEachVisitTaggedGraphTraversal(NewNodeEachVisitGraphTraversal,
 
         for parent, children in leaf_nodes_by_parent.items():
             parent_node = self._nodes[parent]
-            if not self.should_group_leaves_for_parent(parent_node):
-                continue
             nodes_by_tags = {}
             for node_id in children:
                 node = self._nodes[node_id]
@@ -86,6 +84,8 @@ class NewNodeEachVisitTaggedGraphTraversal(NewNodeEachVisitGraphTraversal,
                 nodes_by_tags.setdefault(label, []).append(node)
 
             for tag_group, nodes in nodes_by_tags.items():
+                if not self.should_group_leaves(parent_node, nodes, tag_group):
+                    continue
                 lookup = self.generate_id_for_grouped_node(parent_node, nodes[0], tag_group)
                 gn = GroupedNodes(
                     nodes=nodes,
@@ -163,6 +163,10 @@ class SameNodeEachVisitTaggedGraphTraversal(NewNodeEachVisitTaggedGraphTraversal
         label_parent_depth = '{}:{}:{}'.format(parent_node.unique_id, node.depth, tag_group)
         lookup = hashlib.sha256(label_parent_depth.encode()).hexdigest()[16]
         return int(lookup, 16)
+
+    def should_group_leaves(self, parent_node: Node, nodes: List[Node], tag_group: str) -> bool:
+        gen_id = self.generate_id_for_grouped_node(parent_node, nodes[0], tag_group)
+        return gen_id not in self.visited_nodes
 
     def traverse_from_node(self, node: Union[int, Node], max_depth: Optional[int] = None) -> bool:
         if isinstance(node, int):
