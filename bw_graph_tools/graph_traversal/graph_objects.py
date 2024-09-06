@@ -87,7 +87,7 @@ class GroupedNodes:
 @dataclass
 class Edge:
     """
-    An edge between two *activities*. The `amount` is the amount of the product demanded by the
+    An edge between two `Node` instances. The `amount` is the amount of the product demanded by the
     `consumer`.
 
     Parameters

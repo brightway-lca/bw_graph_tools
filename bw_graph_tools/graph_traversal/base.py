@@ -24,6 +24,8 @@ class BaseGraphTraversal(Generic[Settings]):
             static_activity_indices=None,
     ):
         """
+        Base class for common graph traversal methods. Should be inherited from, not used directly.
+
         Parameters
         ----------
         lca : bw2calc.LCA
@@ -49,51 +51,61 @@ class BaseGraphTraversal(Generic[Settings]):
         # allows the user to store metadata from the traversal
         self.metadata = dict()
 
-        self._nodes: Dict[int, Node] = {
-            functional_unit_unique_id: Node(
-                unique_id=functional_unit_unique_id,
-                activity_datapackage_id=functional_unit_unique_id,
-                activity_index=functional_unit_unique_id,
-                reference_product_datapackage_id=functional_unit_unique_id,
-                reference_product_index=functional_unit_unique_id,
-                reference_product_production_amount=1.0,
-                depth=0,
-                supply_amount=1.0,
-                cumulative_score=self.lca.score,
-                direct_emissions_score=0.0,
-            )
-        }
-        self._root_node = self._nodes[functional_unit_unique_id]
+        # internal properties
+        self._root_node = Node(
+            unique_id=functional_unit_unique_id,
+            activity_datapackage_id=functional_unit_unique_id,
+            activity_index=functional_unit_unique_id,
+            reference_product_datapackage_id=functional_unit_unique_id,
+            reference_product_index=functional_unit_unique_id,
+            reference_product_production_amount=1.0,
+            depth=0,
+            # Not one of any particular product in the functional unit, but one functional
+            # unit itself.
+            supply_amount=1.0,
+            cumulative_score=self.lca.score,
+            direct_emissions_score=0.0,
+        )
+        self._nodes: Dict[int, Node] = {functional_unit_unique_id: self._root_node}
         self._edges: List[Edge] = []
         self._flows: List[Flow] = []
         self._heap: List[Node] = []
-
-        # internal properties
         self._caching_solver = CachingSolver(lca)
 
     @property
     def nodes(self):
         """
-        instances of the `Node` dataclass. Each `Node` has a `unique_id`, as every time we
-        arrive at an activity (even if we have seen it before via another branch of the supply
-        chain), we create a new `Node` object with a unique id. See the `Node` documentation
-        for its other attributes.
+        List of `Node` dataclass instances.
+
+        Each `Node` instance has a `unique_id`, regardless of graph traversal class. In some
+        classes, each node in the database will only appear once in this list of graph traversal
+        node instances, but in `NewNodeEachVisitGraphTraversal`, we create a new `Node` every time
+        we reach a database node, even if we have seen it before.
+
+        See the `Node` documentation for its other attributes.
         """
         return self._nodes
 
     @property
     def edges(self):
         """
-        is a list of `Edge` instances. Edges link two `Node` instances (but not `Flow`
-        instances, that is handled separately). The `Edge` amount is the amount demanded of
-        the producer at that point in the supply chain, scaled to the amount of the producer
-        requested.
+        List of `Edge` instances. Edges link two `Node` instances.
+
+        Note that there are no `Edge` instances which link `Flow` instances - these are handled
+        separately.
+
+        See the `Edge` documentation for its other attributes.
         """
         return self._edges
 
     @property
     def flows(self):
         """
-        is a list of `Flow` instances; biosphere flows are linked to a particular `Node`.
+        List of `Flow` instances.
+
+        A `Flow` instance is a *characterized biosphere flow* associated with a specific `Node`
+        instance.
+
+        See the `Flow` documentation for its other attributes.
         """
         return self._flows
