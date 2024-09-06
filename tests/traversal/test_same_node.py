@@ -1,16 +1,15 @@
 import pytest
 
-from bw_graph_tools.graph_traversal import SameNodeEachVisitGraphTraversal, SupplyChainTraversalSettings
+from bw_graph_tools.graph_traversal import (
+    SameNodeEachVisitGraphTraversal,
+    SupplyChainTraversalSettings,
+)
 from bw_graph_tools.graph_traversal.base import GraphTraversalException
 
 
 def get_default_graph(lca):
     return SameNodeEachVisitGraphTraversal(
-        lca=lca,
-        settings=SupplyChainTraversalSettings(
-            cutoff=0.001,
-            max_calc=3
-        )
+        lca=lca, settings=SupplyChainTraversalSettings(cutoff=0.001, max_calc=3)
     )
 
 
@@ -24,8 +23,9 @@ class TestSameNodeTraversal:
     def test_traversal_from_root_node(self, graph):
         graph.traverse(max_depth=1)
         assert len(graph.nodes) == 2
-        assert graph.traverse_from_node(node=graph._root_node,
-                                        max_depth=1) is False, "Expecting that root node was already visiting"
+        assert (
+            graph.traverse_from_node(node=graph._root_node, max_depth=1) is False
+        ), "Expecting that root node was already visiting"
 
     @pytest.mark.parametrize("max_depth", [1, 2, 3])
     def test_traversal_from_node_with_depth(self, graph, max_depth):
@@ -33,10 +33,9 @@ class TestSameNodeTraversal:
         for _, node in graph.nodes.items():
             if node.depth >= max_depth:
                 continue
-            assert graph.traverse_from_node(
-                node=node,
-                max_depth=node.depth + 1
-            ) is False, f"Expected node with depth <= {max_depth} was already visited"
+            assert (
+                graph.traverse_from_node(node=node, max_depth=node.depth + 1) is False
+            ), f"Expected node with depth <= {max_depth} was already visited"
 
     def test_traversal_same_with_full_depth(self, graph):
         duplicate_graph = get_default_graph(graph.lca)

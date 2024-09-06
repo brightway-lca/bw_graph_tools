@@ -68,6 +68,7 @@ class GroupedNodes:
     """
     A group of nodes
     """
+
     nodes: List[Node]
     label: str
     unique_id: int

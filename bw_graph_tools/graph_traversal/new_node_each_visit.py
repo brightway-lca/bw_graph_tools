@@ -14,9 +14,9 @@ try:
 except ImportError:
     databases = {}
 
-from .base import BaseGraphTraversal
 from ..matrix_tools import guess_production_exchanges
-from .graph_objects import Node, Edge, Flow
+from .base import BaseGraphTraversal
+from .graph_objects import Edge, Flow, Node
 from .utils import CachingSolver, Counter
 
 
@@ -171,7 +171,8 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[SupplyChainTraversalSett
         self.cutoff_score = abs(total_score * self.settings.cutoff)
         self.biosphere_cutoff_score = abs(total_score * self.settings.biosphere_cutoff)
         self.production_exchange_mapping = {
-            x: y for x, y in zip(*self.get_production_exchanges(self.lca.technosphere_mm))
+            x: y
+            for x, y in zip(*self.get_production_exchanges(self.lca.technosphere_mm))
         }
         self._calculation_count = Counter()
         self.characterized_biosphere = self.get_characterized_biosphere(self.lca)
@@ -419,7 +420,9 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[SupplyChainTraversalSett
 
             supply = caching_solver(product_index, product_amount)
             cumulative_score = float((characterized_biosphere * supply).sum())
-            reference_product_net_production_amount = matrix[product_index, producer_index]
+            reference_product_net_production_amount = matrix[
+                product_index, producer_index
+            ]
             scale = product_amount / reference_product_net_production_amount
 
             if abs(cumulative_score) < cutoff_score:
@@ -429,13 +432,17 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[SupplyChainTraversalSett
                 unique_id=next(calculation_count),
                 activity_datapackage_id=lca.dicts.activity.reversed[producer_index],
                 activity_index=producer_index,
-                reference_product_datapackage_id=lca.dicts.product.reversed[product_index],
+                reference_product_datapackage_id=lca.dicts.product.reversed[
+                    product_index
+                ],
                 reference_product_index=product_index,
                 reference_product_production_amount=reference_product_net_production_amount,
                 supply_amount=scale,
                 depth=current_depth + 1,
                 cumulative_score=cumulative_score,
-                direct_emissions_score=(scale * characterized_biosphere[:, producer_index]).sum(),
+                direct_emissions_score=(
+                    scale * characterized_biosphere[:, producer_index]
+                ).sum(),
             )
             edges.append(
                 Edge(
@@ -493,7 +500,9 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[SupplyChainTraversalSett
         return lca.characterization_matrix * lca.biosphere_matrix
 
     @classmethod
-    def get_production_exchanges(cls, mapped_matrix: mu.MappedMatrix) -> (np.array, np.array):
+    def get_production_exchanges(
+        cls, mapped_matrix: mu.MappedMatrix
+    ) -> (np.array, np.array):
         """
         Get matrix row and column indices of productions exchanges by trying a
         series of heuristics. See documentation for
@@ -560,7 +569,8 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[SupplyChainTraversalSett
                         activity_id=node.activity_datapackage_id,
                         activity_index=node.activity_index,
                         amount=(
-                            lca.biosphere_matrix[index, node.activity_index] * node.supply_amount
+                            lca.biosphere_matrix[index, node.activity_index]
+                            * node.supply_amount
                         ),
                         score=score,
                     )

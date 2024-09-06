@@ -125,32 +125,32 @@ def sample_database_with_tagged_products():
                 "name": "a",
                 "exchanges": [],
                 "tags": {
-                    'test': 'group-a',
-                }
+                    "test": "group-a",
+                },
             },
             ("bio", "b"): {
                 "type": "emission",
                 "name": "b",
                 "exchanges": [],
                 "tags": {
-                    'test': 'group-a',
-                }
+                    "test": "group-a",
+                },
             },
             ("bio", "c"): {
                 "type": "emission",
                 "name": "c",
                 "exchanges": [],
                 "tags": {
-                    'test': 'group-b',
-                }
+                    "test": "group-b",
+                },
             },
             ("bio", "d"): {
                 "type": "emission",
                 "name": "d",
                 "exchanges": [],
                 "tags": {
-                    'test': 'group-b',
-                }
+                    "test": "group-b",
+                },
             },
         }
     )
@@ -199,26 +199,10 @@ def sample_database_with_tagged_products():
                         "amount": 2,
                         "type": "production",
                     },
-                    {
-                        "input": ("t", "3"),
-                        "amount": 4,
-                        "type": "technosphere"
-                    },
-                    {
-                        "input": ("t", "5"),
-                        "amount": 1,
-                        "type": "technosphere"
-                    },
-                    {
-                        "input": ("t", "6"),
-                        "amount": 1,
-                        "type": "technosphere"
-                    },
-                    {
-                        "input": ("t", "7"),
-                        "amount": 1,
-                        "type": "technosphere"
-                    },
+                    {"input": ("t", "3"), "amount": 4, "type": "technosphere"},
+                    {"input": ("t", "5"), "amount": 1, "type": "technosphere"},
+                    {"input": ("t", "6"), "amount": 1, "type": "technosphere"},
+                    {"input": ("t", "7"), "amount": 1, "type": "technosphere"},
                 ],
             },
             ("t", "3"): {
@@ -233,11 +217,11 @@ def sample_database_with_tagged_products():
                         "input": ("t", "3"),
                         "amount": 1,
                         "type": "production",
-                    }
+                    },
                 ],
                 "tags": {
-                    'test': 'group-b',
-                }
+                    "test": "group-b",
+                },
             },
             ("t", "4"): {
                 "name": "4",
@@ -254,8 +238,8 @@ def sample_database_with_tagged_products():
                     },
                 ],
                 "tags": {
-                    'test': 'group-a',
-                }
+                    "test": "group-a",
+                },
             },
             ("t", "5"): {
                 "name": "5",
@@ -272,8 +256,8 @@ def sample_database_with_tagged_products():
                     },
                 ],
                 "tags": {
-                    'test': 'group-a',
-                }
+                    "test": "group-a",
+                },
             },
             ("t", "6"): {
                 "name": "6",
@@ -290,8 +274,8 @@ def sample_database_with_tagged_products():
                     },
                 ],
                 "tags": {
-                    'test': 'group-b',
-                }
+                    "test": "group-b",
+                },
             },
             ("t", "7"): {
                 "name": "7",
@@ -313,8 +297,8 @@ def sample_database_with_tagged_products():
                     },
                 ],
                 "tags": {
-                    'test': 'group-b',
-                }
+                    "test": "group-b",
+                },
             },
         }
     )

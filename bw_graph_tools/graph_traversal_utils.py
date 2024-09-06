@@ -60,7 +60,10 @@ def path_as_brightway_objects(
         (
             bd.get_node(id=lca.dicts.product.reversed[x]),
             bd.get_node(id=lca.dicts.activity.reversed[y]),
-            -1 * lca.technosphere_matrix[y, x],  # Flip x and y because y is input to activity x
+            -1
+            * lca.technosphere_matrix[
+                y, x
+            ],  # Flip x and y because y is input to activity x
         )
         for x, y in zip(path[:-1], path[1:])
     ]

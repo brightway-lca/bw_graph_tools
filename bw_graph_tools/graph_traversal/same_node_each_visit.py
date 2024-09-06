@@ -1,5 +1,5 @@
 from pprint import pprint
-from typing import Optional, Union, List
+from typing import List, Optional, Union
 
 from .base import GraphTraversalException
 from .graph_objects import Node
@@ -19,9 +19,9 @@ class SameNodeEachVisitGraphTraversal(NewNodeEachVisitGraphTraversal):
         self.visited_nodes = set()
 
     def traverse(
-            self,
-            nodes: List[Node] = None,
-            max_depth: int = None,
+        self,
+        nodes: List[Node] = None,
+        max_depth: int = None,
     ) -> None:
         """
         Perform graph traversal from the given `Node` instances, or from the functional unit.
@@ -52,15 +52,13 @@ class SameNodeEachVisitGraphTraversal(NewNodeEachVisitGraphTraversal):
                 )
         super().traverse(nodes, max_depth=max_depth)
 
-    def traverse_edges(
-            self,
-            *args,
-            **kwargs
-    ) -> None:
+    def traverse_edges(self, *args, **kwargs) -> None:
         super().traverse_edges(*args, **kwargs)
-        self.visited_nodes.add(kwargs['consumer_unique_id'])
+        self.visited_nodes.add(kwargs["consumer_unique_id"])
 
-    def traverse_from_node(self, node: Union[int, Node], max_depth: Optional[int] = None) -> bool:
+    def traverse_from_node(
+        self, node: Union[int, Node], max_depth: Optional[int] = None
+    ) -> bool:
         """
         Traverse the graph starting from the specified node and exp
         returning a boolean indicating if the node traversed already

@@ -1,6 +1,7 @@
-from bw2calc import LCA
-import numpy as np
 from functools import lru_cache
+
+import numpy as np
+from bw2calc import LCA
 
 
 class CachingSolver:

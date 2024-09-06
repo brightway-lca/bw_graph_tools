@@ -1,14 +1,16 @@
 import hashlib
 from dataclasses import dataclass, field
-from typing import List, Dict, Tuple, Union, Optional, Set
+from typing import Dict, List, Optional, Set, Tuple, Union
 
 import bw2data as bd
 
 from bw_graph_tools.graph_traversal import SameNodeEachVisitGraphTraversal
 from bw_graph_tools.graph_traversal.base import BaseGraphTraversal
-from bw_graph_tools.graph_traversal.graph_objects import GroupedNodes, Edge, Node
-from bw_graph_tools.graph_traversal.new_node_each_visit import SupplyChainTraversalSettings, \
-    NewNodeEachVisitGraphTraversal
+from bw_graph_tools.graph_traversal.graph_objects import Edge, GroupedNodes, Node
+from bw_graph_tools.graph_traversal.new_node_each_visit import (
+    NewNodeEachVisitGraphTraversal,
+    SupplyChainTraversalSettings,
+)
 
 
 @dataclass
@@ -25,8 +27,10 @@ class TaggedSupplyChainTraversalSettings(SupplyChainTraversalSettings):
     tags: List[str] = field(default_factory=list)
 
 
-class NewNodeEachVisitTaggedGraphTraversal(NewNodeEachVisitGraphTraversal,
-                                           BaseGraphTraversal[TaggedSupplyChainTraversalSettings]):
+class NewNodeEachVisitTaggedGraphTraversal(
+    NewNodeEachVisitGraphTraversal,
+    BaseGraphTraversal[TaggedSupplyChainTraversalSettings],
+):
     """
     Traverse the graph with leaves nodes grouped by their tags
     """
@@ -37,22 +41,26 @@ class NewNodeEachVisitTaggedGraphTraversal(NewNodeEachVisitGraphTraversal,
         self._tagged_edges = []
         self._tagged_flows = []
 
-    def generate_id_for_grouped_node(self, parent_node: Node, node: Node, tag_group: str) -> int:
+    def generate_id_for_grouped_node(
+        self, parent_node: Node, node: Node, tag_group: str
+    ) -> int:
         """
         Generate an id for a grouped node
         """
         return next(self._calculation_count)
 
-    def should_group_leaves(self, parent_node: Node, nodes: List[Node], tag_group: str) -> bool:
+    def should_group_leaves(
+        self, parent_node: Node, nodes: List[Node], tag_group: str
+    ) -> bool:
         """
         Whether to group leaves for a specific parent and tag group
         """
         return True
 
     def traverse(
-            self,
-            nodes: list = None,
-            max_depth: int = None,
+        self,
+        nodes: list = None,
+        max_depth: int = None,
     ) -> None:
         super().traverse(nodes=nodes, max_depth=max_depth)
 
@@ -67,7 +75,9 @@ class NewNodeEachVisitTaggedGraphTraversal(NewNodeEachVisitGraphTraversal,
         leaf_nodes_by_parent: Dict[str, Set[int]] = {}
         for edge in self._edges:
             if edge.producer_unique_id not in non_terminal_nodes:
-                leaf_nodes_by_parent.setdefault(edge.consumer_unique_id, set()).add(edge.producer_unique_id)
+                leaf_nodes_by_parent.setdefault(edge.consumer_unique_id, set()).add(
+                    edge.producer_unique_id
+                )
 
         for parent, children in leaf_nodes_by_parent.items():
             parent_node = self._nodes[parent]
@@ -80,13 +90,20 @@ class NewNodeEachVisitTaggedGraphTraversal(NewNodeEachVisitGraphTraversal,
                     # means that no tags are set on this node, just add the node
                     self._tagged_nodes[node_id] = node
                     continue
-                label = ' '.join(['{}: {}'.format(tag, atags.get(tag, None) or "") for tag in self.settings.tags])
+                label = " ".join(
+                    [
+                        "{}: {}".format(tag, atags.get(tag, None) or "")
+                        for tag in self.settings.tags
+                    ]
+                )
                 nodes_by_tags.setdefault(label, []).append(node)
 
             for tag_group, nodes in nodes_by_tags.items():
                 if not self.should_group_leaves(parent_node, nodes, tag_group):
                     continue
-                lookup = self.generate_id_for_grouped_node(parent_node, nodes[0], tag_group)
+                lookup = self.generate_id_for_grouped_node(
+                    parent_node, nodes[0], tag_group
+                )
                 gn = GroupedNodes(
                     nodes=nodes,
                     label=tag_group,
@@ -96,44 +113,53 @@ class NewNodeEachVisitTaggedGraphTraversal(NewNodeEachVisitGraphTraversal,
                     cumulative_score=0,
                     direct_emissions_score=0,
                     direct_emissions_score_outside_specific_flows=0,
-                    terminal=True
+                    terminal=True,
                 )
 
                 for node in nodes:
                     gn.supply_amount += node.supply_amount
                     gn.cumulative_score += node.cumulative_score
                     gn.direct_emissions_score += node.direct_emissions_score
-                    gn.direct_emissions_score_outside_specific_flows += node.direct_emissions_score_outside_specific_flows
+                    gn.direct_emissions_score_outside_specific_flows += (
+                        node.direct_emissions_score_outside_specific_flows
+                    )
 
                 self._tagged_nodes[gn.unique_id] = gn
                 grouped_nodes[gn.unique_id] = gn
 
         visited_group_nodes = {
-            gn_node.unique_id
-            for gn in grouped_nodes.values()
-            for gn_node in gn.nodes
+            gn_node.unique_id for gn in grouped_nodes.values() for gn_node in gn.nodes
         }
         for idx, node in self._nodes.items():
-            if node.unique_id in self._tagged_nodes or node.unique_id in visited_group_nodes:
+            if (
+                node.unique_id in self._tagged_nodes
+                or node.unique_id in visited_group_nodes
+            ):
                 continue
             self._tagged_nodes[idx] = node
 
         for edge in self._edges:
-            if edge.consumer_unique_id in self._tagged_nodes and edge.producer_unique_id in self._tagged_nodes:
+            if (
+                edge.consumer_unique_id in self._tagged_nodes
+                and edge.producer_unique_id in self._tagged_nodes
+            ):
                 self._tagged_edges.append(edge)
                 continue
             # we have to now search from the missing edge
             for gn in grouped_nodes.values():
                 for node in gn.nodes:
                     if edge.producer_unique_id == node.unique_id:
-                        gedge = edges.setdefault((edge.consumer_unique_id, gn.unique_id), Edge(
-                            consumer_index=edge.consumer_index,
-                            consumer_unique_id=edge.consumer_unique_id,
-                            producer_index=None,
-                            producer_unique_id=gn.unique_id,
-                            product_index=None,
-                            amount=0,
-                        ))
+                        gedge = edges.setdefault(
+                            (edge.consumer_unique_id, gn.unique_id),
+                            Edge(
+                                consumer_index=edge.consumer_index,
+                                consumer_unique_id=edge.consumer_unique_id,
+                                producer_index=None,
+                                producer_unique_id=gn.unique_id,
+                                product_index=None,
+                                amount=0,
+                            ),
+                        )
                         gedge.amount += edge.amount
 
         self._tagged_edges.extend(edges.values())
@@ -151,24 +177,34 @@ class NewNodeEachVisitTaggedGraphTraversal(NewNodeEachVisitGraphTraversal,
         return self._tagged_flows
 
 
-class SameNodeEachVisitTaggedGraphTraversal(NewNodeEachVisitTaggedGraphTraversal, SameNodeEachVisitGraphTraversal):
+class SameNodeEachVisitTaggedGraphTraversal(
+    NewNodeEachVisitTaggedGraphTraversal, SameNodeEachVisitGraphTraversal
+):
     """
     A tagged variant of same node each visit
     """
 
-    def generate_id_for_grouped_node(self, parent_node: Node, node: Node, tag_group: str) -> int:
+    def generate_id_for_grouped_node(
+        self, parent_node: Node, node: Node, tag_group: str
+    ) -> int:
         """
         Generate a consistent id for a grouped node
         """
-        label_parent_depth = '{}:{}:{}'.format(parent_node.unique_id, node.depth, tag_group)
+        label_parent_depth = "{}:{}:{}".format(
+            parent_node.unique_id, node.depth, tag_group
+        )
         lookup = hashlib.sha256(label_parent_depth.encode()).hexdigest()[16]
         return int(lookup, 16)
 
-    def should_group_leaves(self, parent_node: Node, nodes: List[Node], tag_group: str) -> bool:
+    def should_group_leaves(
+        self, parent_node: Node, nodes: List[Node], tag_group: str
+    ) -> bool:
         gen_id = self.generate_id_for_grouped_node(parent_node, nodes[0], tag_group)
         return gen_id not in self.visited_nodes
 
-    def traverse_from_node(self, node: Union[int, Node], max_depth: Optional[int] = None) -> bool:
+    def traverse_from_node(
+        self, node: Union[int, Node], max_depth: Optional[int] = None
+    ) -> bool:
         if isinstance(node, int):
             node = self.nodes[node]
         if isinstance(node, GroupedNodes):
@@ -177,6 +213,9 @@ class SameNodeEachVisitTaggedGraphTraversal(NewNodeEachVisitTaggedGraphTraversal
             self.visited_nodes.add(node.unique_id)
             for child_node in node.nodes:
                 self.visited_nodes.add(child_node.unique_id)
-            super().traverse(nodes=node.nodes, max_depth=node.depth + 1 if max_depth is None else max_depth)
+            super().traverse(
+                nodes=node.nodes,
+                max_depth=node.depth + 1 if max_depth is None else max_depth,
+            )
             return True
         return super().traverse_from_node(node=node, max_depth=max_depth)
