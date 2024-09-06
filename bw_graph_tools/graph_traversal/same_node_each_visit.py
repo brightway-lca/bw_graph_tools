@@ -1,7 +1,8 @@
 from typing import Optional, Union
 
-from .new_node_each_visit import NewNodeEachVisitGraphTraversal
+from .base import GraphTraversalException
 from .graph_objects import Node
+from .new_node_each_visit import NewNodeEachVisitGraphTraversal
 
 
 class SameNodeEachVisitGraphTraversal(NewNodeEachVisitGraphTraversal):
@@ -19,10 +20,41 @@ class SameNodeEachVisitGraphTraversal(NewNodeEachVisitGraphTraversal):
             nodes: list = None,
             max_depth: int = None,
     ) -> None:
-        super().traverse(nodes=nodes, max_depth=max_depth)
-        for node in self._nodes.values():
-            if node.terminal is False or node is self._root_node:
-                self.visited_nodes.add(node.unique_id)
+        """
+        Perform the graph traversal.
+
+        Repeat calls to traverse from the same node or root node will raise an Exception.
+        See `traverse_from_node` for a safe version of repeated calls for traversal.
+
+        Parameters
+        ----------
+        nodes : list
+            list of nodes to traverse, otherwise uses the root node as the starting point
+        max_depth : int
+            Maximum depth in the supply chain traversal. Default is no maximum.
+
+        Returns
+        -------
+        `None`
+            Modifies the class object's state in-place
+
+        """
+        if nodes is None and self._root_node.unique_id in self.visited_nodes:
+            raise GraphTraversalException("the root node has already been traversed")
+        elif nodes:
+            visited_nodes = [node for node in nodes if node.unique_id in self.visited_nodes]
+            if visited_nodes:
+                raise GraphTraversalException("some node(s) have already been traversed".format(len(visited_nodes)),
+                                              visited_nodes)
+        super().traverse(nodes, max_depth=max_depth)
+
+    def traverse_edges(
+            self,
+            *args,
+            **kwargs
+    ) -> None:
+        super().traverse_edges(*args, **kwargs)
+        self.visited_nodes.add(kwargs['consumer_unique_id'])
 
     def traverse_from_node(self, node: Union[int, Node], max_depth: Optional[int] = None) -> bool:
         """

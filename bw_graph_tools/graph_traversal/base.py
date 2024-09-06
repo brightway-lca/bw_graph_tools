@@ -10,14 +10,18 @@ if typing.TYPE_CHECKING:
 Settings = TypeVar("Settings")
 
 
+class GraphTraversalException(Exception):
+    ...
+
+
 class BaseGraphTraversal(Generic[Settings]):
 
     def __init__(
-        self,
-        lca: "bw2calc.LCA",
-        settings: Settings,
-        functional_unit_unique_id: int = -1,
-        static_activity_indices=None,
+            self,
+            lca: "bw2calc.LCA",
+            settings: Settings,
+            functional_unit_unique_id: int = -1,
+            static_activity_indices=None,
     ):
         """
         Parameters
