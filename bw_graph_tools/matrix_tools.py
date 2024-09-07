@@ -132,9 +132,7 @@ def gpe_second_heuristic(
             existing_mask = np.in1d(h2_col_indices, col_existing)
 
             # Need mask with correct shape for both row and col indices
-            mask = np.in1d(
-                group.col_masked[~group.flip], h2_col_indices[~existing_mask]
-            )
+            mask = np.in1d(group.col_masked[~group.flip], h2_col_indices[~existing_mask])
 
             not_flipped.append(
                 (
@@ -200,9 +198,7 @@ def guess_production_exchanges(mm: mu.MappedMatrix) -> Tuple[np.ndarray, np.ndar
     # Every column must have an activity with some reference product or the system
     # is not solvable. Therefore we can look across all columns. We will do
     # all the work in matrix indices.
-    missing = np.setdiff1d(
-        np.arange(mm.matrix.shape[0]), col_indices, assume_unique=True
-    )
+    missing = np.setdiff1d(np.arange(mm.matrix.shape[0]), col_indices, assume_unique=True)
 
     # Short circuit other steps if possible; assumption is that this step will
     # be taken for most matrices
@@ -216,9 +212,7 @@ def guess_production_exchanges(mm: mu.MappedMatrix) -> Tuple[np.ndarray, np.ndar
     if row_indices.shape != col_indices.shape:
         raise ValueError("Guessed row indices do not match guessed column indices.")
 
-    missing = np.setdiff1d(
-        np.arange(mm.matrix.shape[0]), col_indices, assume_unique=True
-    )
+    missing = np.setdiff1d(np.arange(mm.matrix.shape[0]), col_indices, assume_unique=True)
     if missing.size:
         raise UnclearProductionExchange(
             "Can't find production exchanges for columns: {}".format(list(missing))

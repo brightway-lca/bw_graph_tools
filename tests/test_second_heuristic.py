@@ -29,9 +29,7 @@ def test_second_heuristic_empty_existing():
         packages=[dp1],
         matrix="test",
     )
-    row, col = gpe_second_heuristic(
-        mm=mm, row_existing=np.array([]), col_existing=np.array([])
-    )
+    row, col = gpe_second_heuristic(mm=mm, row_existing=np.array([]), col_existing=np.array([]))
     assert np.array_equal(np.array([1]), row)
     assert np.array_equal(np.array([1]), col)
 
@@ -60,9 +58,7 @@ def test_second_heuristic_off_diagonal():
         packages=[dp1],
         matrix="test",
     )
-    row, col = gpe_second_heuristic(
-        mm=mm, row_existing=np.array([]), col_existing=np.array([])
-    )
+    row, col = gpe_second_heuristic(mm=mm, row_existing=np.array([]), col_existing=np.array([]))
     assert np.array_equal(np.array([0, 1]), row)
     assert np.array_equal(np.array([1, 0]), col)
 
@@ -91,9 +87,7 @@ def test_second_heuristic_exclude_multiple_flips():
         packages=[dp1],
         matrix="test",
     )
-    row, col = gpe_second_heuristic(
-        mm=mm, row_existing=np.array([]), col_existing=np.array([])
-    )
+    row, col = gpe_second_heuristic(mm=mm, row_existing=np.array([]), col_existing=np.array([]))
     assert np.array_equal(np.array([1]), row)
     assert np.array_equal(np.array([1]), col)
 
@@ -122,9 +116,7 @@ def test_second_heuristic_overlap_existing():
         packages=[dp1],
         matrix="test",
     )
-    row, col = gpe_second_heuristic(
-        mm=mm, row_existing=np.array([0]), col_existing=np.array([0])
-    )
+    row, col = gpe_second_heuristic(mm=mm, row_existing=np.array([0]), col_existing=np.array([0]))
     assert np.array_equal(np.array([0, 1]), row)
     assert np.array_equal(np.array([0, 1]), col)
 
@@ -153,9 +145,7 @@ def test_second_heuristic_complement_existing():
         packages=[dp1],
         matrix="test",
     )
-    row, col = gpe_second_heuristic(
-        mm=mm, row_existing=np.array([10]), col_existing=np.array([10])
-    )
+    row, col = gpe_second_heuristic(mm=mm, row_existing=np.array([10]), col_existing=np.array([10]))
     assert np.array_equal(np.array([10, 1, 0]), row)
     assert np.array_equal(np.array([10, 1, 0]), col)
 
@@ -182,8 +172,6 @@ def test_second_heuristic_no_flip():
         packages=[dp1],
         matrix="test",
     )
-    row, col = gpe_second_heuristic(
-        mm=mm, row_existing=np.array([0]), col_existing=np.array([0])
-    )
+    row, col = gpe_second_heuristic(mm=mm, row_existing=np.array([0]), col_existing=np.array([0]))
     assert np.array_equal(np.array([0]), row)
     assert np.array_equal(np.array([0]), col)

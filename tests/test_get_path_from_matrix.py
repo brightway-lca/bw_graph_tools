@@ -30,9 +30,7 @@ def test_simple_graph():
     )
     mm = mu.MappedMatrix(packages=[dp], matrix="test")
     mapper = mm.col_mapper.to_dict()
-    assert get_path_from_matrix(
-        matrix=mm.matrix, source=mapper[A], target=mapper[C]
-    ) == [
+    assert get_path_from_matrix(matrix=mm.matrix, source=mapper[A], target=mapper[C]) == [
         mapper[A],
         mapper[B],
         mapper[C],
@@ -65,9 +63,7 @@ def test_take_longer_path_direct_edge_available():
     )
     mm = mu.MappedMatrix(packages=[dp], matrix="test")
     mapper = mm.col_mapper.to_dict()
-    assert get_path_from_matrix(
-        matrix=mm.matrix, source=mapper[A], target=mapper[C]
-    ) == [
+    assert get_path_from_matrix(matrix=mm.matrix, source=mapper[A], target=mapper[C]) == [
         mapper[A],
         mapper[B],
         mapper[C],
@@ -103,9 +99,7 @@ def test_take_longer_path_no_direct_edge():
     )
     mm = mu.MappedMatrix(packages=[dp], matrix="test")
     mapper = mm.col_mapper.to_dict()
-    assert get_path_from_matrix(
-        matrix=mm.matrix, source=mapper[A], target=mapper[D]
-    ) == [
+    assert get_path_from_matrix(matrix=mm.matrix, source=mapper[A], target=mapper[D]) == [
         mapper[A],
         mapper[B],
         mapper[C],

@@ -6,9 +6,7 @@ from .new_node_each_visit import NewNodeEachVisitGraphTraversal
 
 class AssumedDiagonalGraphTraversal(NewNodeEachVisitGraphTraversal):
     @classmethod
-    def get_production_exchanges(
-        cls, mapped_matrix: mu.MappedMatrix
-    ) -> (np.ndarray, np.ndarray):
+    def get_production_exchanges(cls, mapped_matrix: mu.MappedMatrix) -> (np.ndarray, np.ndarray):
         """
         Assume production exchanges are always on the diagonal instead of
         examining matrix structure and input data.

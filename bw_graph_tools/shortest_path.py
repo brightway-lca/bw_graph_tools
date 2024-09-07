@@ -96,9 +96,7 @@ def get_distances(
     """
     n_jobs, directed = 1, True
     if method == "FW" and n_jobs != 1:
-        raise ValueError(
-            "The Floyd-Warshall algorithm cannot be used with parallel computations."
-        )
+        raise ValueError("The Floyd-Warshall algorithm cannot be used with parallel computations.")
     if sources is None:
         sources = np.arange(adjacency.shape[0])
     elif np.issubdtype(type(sources), np.integer):
@@ -218,13 +216,9 @@ def get_shortest_path(
         )
 
     if source2target:
-        dists, preds = get_distances(
-            adjacency, source, method, True, unweighted, n_jobs
-        )
+        dists, preds = get_distances(adjacency, source, method, True, unweighted, n_jobs)
     else:
-        dists, preds = get_distances(
-            adjacency.T, source, method, True, unweighted, n_jobs
-        )
+        dists, preds = get_distances(adjacency.T, source, method, True, unweighted, n_jobs)
 
     paths = []
     for target in targets:
