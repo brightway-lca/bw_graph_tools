@@ -274,30 +274,30 @@ class SameNodeEachVisitTaggedGraphTraversal(
     A tagged variant of same node each visit
     """
 
-    def generate_id_for_grouped_node(self, parent_node: Node, node: Node, tag_group: str) -> int:
+    def generate_id_for_grouped_node(
+        self, parent_node: Node, nodes: List[Node], tag_group: str
+    ) -> int:
         """
         Generate a consistent id for a grouped node
         """
-        label_parent_depth = "{}:{}:{}".format(parent_node.unique_id, node.depth, tag_group)
+        label_parent_depth = "{}:{}:{}".format(parent_node.unique_id, nodes[0].depth, tag_group)
         lookup = hashlib.sha256(label_parent_depth.encode()).hexdigest()[16]
         return int(lookup, 16)
 
     def should_group_leaves(self, parent_node: Node, nodes: List[Node], tag_group: str) -> bool:
-        gen_id = self.generate_id_for_grouped_node(parent_node, nodes[0], tag_group)
+        gen_id = self.generate_id_for_grouped_node(parent_node, nodes, tag_group)
         return gen_id not in self.visited_nodes
 
-    def traverse_from_node(self, node: Union[int, Node], max_depth: Optional[int] = None) -> bool:
+    def traverse_from_node(self, node: Union[int, Node], depth: Optional[int] = 1) -> bool:
         if isinstance(node, int):
             node = self.nodes[node]
         if isinstance(node, GroupedNodes):
             if node.unique_id in self.visited_nodes:
                 return False
             self.visited_nodes.add(node.unique_id)
-            for child_node in node.nodes:
-                self.visited_nodes.add(child_node.unique_id)
             super().traverse(
                 nodes=node.nodes,
-                max_depth=node.depth + 1 if max_depth is None else max_depth,
+                depth=depth,
             )
             return True
-        return super().traverse_from_node(node=node, max_depth=max_depth)
+        return super().traverse_from_node(node=node, depth=depth)
