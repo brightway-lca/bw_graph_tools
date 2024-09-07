@@ -117,7 +117,7 @@ def sample_database_with_products():
 
 
 @pytest.fixture
-def sample_database_with_tagged_products():
+def tagged_data():
     Database("bio").write(
         {
             ("bio", "a"): {
@@ -275,6 +275,7 @@ def sample_database_with_tagged_products():
                 ],
                 "tags": {
                     "test": "group-b",
+                    "second": "1",
                 },
             },
             ("t", "7"): {
@@ -310,6 +311,10 @@ def sample_database_with_tagged_products():
             (("bio", "d"), 2),
         ]
     )
+
+
+@pytest.fixture
+def sample_database_with_tagged_products(tagged_data):
     lca = LCA({("t", "2"): 8}, ("test",))
     lca.lci()
     lca.lcia()

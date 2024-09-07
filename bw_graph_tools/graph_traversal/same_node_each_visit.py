@@ -1,4 +1,4 @@
-from pprint import pprint
+from pprint import pformat
 from typing import List, Optional, Union
 
 from .base import GraphTraversalException
@@ -21,7 +21,7 @@ class SameNodeEachVisitGraphTraversal(NewNodeEachVisitGraphTraversal):
     def traverse(
         self,
         nodes: List[Node] = None,
-        max_depth: int = None,
+        depth: int = None,
     ) -> None:
         """
         Perform graph traversal from the given `Node` instances, or from the functional unit.
@@ -33,8 +33,8 @@ class SameNodeEachVisitGraphTraversal(NewNodeEachVisitGraphTraversal):
         ----------
         nodes : list[Node]
             List of `Node` instances to traverse from. Uses `self._root_node` as the default.
-        max_depth : int
-            Maximum depth in the supply chain traversal. Default is no maximum.
+        depth : int
+            depth to traverse for each node provided up to the max specified in the setting's max_depth (if any)
 
         Returns
         -------
@@ -45,20 +45,18 @@ class SameNodeEachVisitGraphTraversal(NewNodeEachVisitGraphTraversal):
         if nodes is None and self._root_node.unique_id in self.visited_nodes:
             raise GraphTraversalException("The root node has already been traversed")
         elif nodes:
-            if seen := {node for node in nodes if node.unique_id in self.visited_nodes}:
-                err = "\n".join([pprint(node) for node in seen])
+            if seen := [node for node in nodes if node.unique_id in self.visited_nodes]:
+                err = "\n".join([pformat(node) for node in seen])
                 raise GraphTraversalException(
                     f"The following nodes have been traversed already:\n{err}"
                 )
-        super().traverse(nodes, max_depth=max_depth)
+        super().traverse(nodes, depth=depth)
 
     def traverse_edges(self, *args, **kwargs) -> None:
         super().traverse_edges(*args, **kwargs)
         self.visited_nodes.add(kwargs["consumer_unique_id"])
 
-    def traverse_from_node(
-        self, node: Union[int, Node], max_depth: Optional[int] = None
-    ) -> bool:
+    def traverse_from_node(self, node: Union[int, Node], depth: Optional[int] = 1) -> bool:
         """
         Traverse the graph starting from the specified node and exp
         returning a boolean indicating if the node traversed already
@@ -67,8 +65,8 @@ class SameNodeEachVisitGraphTraversal(NewNodeEachVisitGraphTraversal):
         ----------
         node
             either the node's unique id or a `Node` object
-        max_depth
-            max depth to traverse from this node, otherwise will default to `node.depth + 1`
+        depth
+            depth to traverse from this node, otherwise will default to 1
 
         Returns
         -------
@@ -80,10 +78,6 @@ class SameNodeEachVisitGraphTraversal(NewNodeEachVisitGraphTraversal):
         if node.unique_id in self.visited_nodes:
             return False
 
-        self.traverse(
-            nodes=[node],
-            max_depth=node.depth + 1 if max_depth is None else max_depth,
-        )
-        self.visited_nodes.add(node.unique_id)
+        self.traverse(nodes=[node], depth=depth)
 
         return True

@@ -79,6 +79,8 @@ class SupplyChainTraversalSettings:
         added. Fraction of total score.
     max_calc : int
         Maximum number of inventory calculations to perform
+    max_depth : int
+        Maximum depth in the supply chain traversal. Default is no maximum.
     skip_coproducts : bool
         Don't traverse co-production edges, i.e. production edges other
         than the reference product
@@ -90,6 +92,7 @@ class SupplyChainTraversalSettings:
     cutoff: float = field(default=5e-3)
     biosphere_cutoff: float = field(default=1e-4)
     max_calc: int = field(default=10000)
+    max_depth: int = field(default=None)
     skip_coproducts: bool = field(default=False)
     separate_biosphere_flows: bool = field(default=False)
 
@@ -171,8 +174,7 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[SupplyChainTraversalSett
         self.cutoff_score = abs(total_score * self.settings.cutoff)
         self.biosphere_cutoff_score = abs(total_score * self.settings.biosphere_cutoff)
         self.production_exchange_mapping = {
-            x: y
-            for x, y in zip(*self.get_production_exchanges(self.lca.technosphere_mm))
+            x: y for x, y in zip(*self.get_production_exchanges(self.lca.technosphere_mm))
         }
         self._calculation_count = Counter()
         self.characterized_biosphere = self.get_characterized_biosphere(self.lca)
@@ -320,7 +322,7 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[SupplyChainTraversalSett
     def traverse(
         self,
         nodes: list = None,
-        max_depth: int = None,
+        depth: int = None,
     ) -> None:
         """
         Perform the graph traversal.
@@ -329,8 +331,8 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[SupplyChainTraversalSett
         ----------
         nodes : list
             list of nodes to traverse, otherwise uses the root node as the starting point
-        max_depth : int
-            Maximum depth in the supply chain traversal. Default is no maximum.
+        depth : int
+            depth to traverse for each node provided up to the max specified in the setting's max_depth (if any)
 
         Returns
         -------
@@ -339,10 +341,39 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[SupplyChainTraversalSett
 
         """
         if nodes is None:
-            heap = [(0, self._root_node)]
-        else:
-            heap = [(0, node) for node in nodes]
+            nodes = [self._root_node]
 
+        for node in nodes:
+            heap = [(0, node)]
+            max_depth = None
+            if depth:
+                max_depth = node.depth + depth
+                if self.settings.max_depth is not None:
+                    max_depth = min(max_depth, self.settings.max_depth)
+
+            self._traverse(heap, max_depth=max_depth)
+
+        self._flows.sort(reverse=True)
+
+        non_terminal_nodes = {edge.consumer_unique_id for edge in self._edges}
+        for node_id_key in self._nodes:
+            if node_id_key not in non_terminal_nodes:
+                terminal = True
+            else:
+                terminal = False
+            self._nodes[node_id_key].terminal = terminal
+
+    def _traverse(self, heap, max_depth):
+        """
+        Traverse the graph.
+
+        Parameters
+        ----------
+        heap:
+            nodes to traverse
+        max_depth:
+            maximum depth to traverse
+        """
         while heap:
             if self._calculation_count > self.settings.max_calc:
                 warnings.warn("Stopping traversal due to calculation count.")
@@ -378,16 +409,6 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[SupplyChainTraversalSett
                 biosphere_cutoff_score=self.biosphere_cutoff_score,
             )
 
-        self._flows.sort(reverse=True)
-
-        non_terminal_nodes = {edge.consumer_unique_id for edge in self._edges}
-        for node_id_key in self._nodes:
-            if node_id_key not in non_terminal_nodes:
-                terminal = True
-            else:
-                terminal = False
-            self._nodes[node_id_key].terminal = terminal
-
     @classmethod
     def traverse_edges(
         cls,
@@ -420,9 +441,7 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[SupplyChainTraversalSett
 
             supply = caching_solver(product_index, product_amount)
             cumulative_score = float((characterized_biosphere * supply).sum())
-            reference_product_net_production_amount = matrix[
-                product_index, producer_index
-            ]
+            reference_product_net_production_amount = matrix[product_index, producer_index]
             scale = product_amount / reference_product_net_production_amount
 
             if abs(cumulative_score) < cutoff_score:
@@ -432,17 +451,13 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[SupplyChainTraversalSett
                 unique_id=next(calculation_count),
                 activity_datapackage_id=lca.dicts.activity.reversed[producer_index],
                 activity_index=producer_index,
-                reference_product_datapackage_id=lca.dicts.product.reversed[
-                    product_index
-                ],
+                reference_product_datapackage_id=lca.dicts.product.reversed[product_index],
                 reference_product_index=product_index,
                 reference_product_production_amount=reference_product_net_production_amount,
                 supply_amount=scale,
                 depth=current_depth + 1,
                 cumulative_score=cumulative_score,
-                direct_emissions_score=(
-                    scale * characterized_biosphere[:, producer_index]
-                ).sum(),
+                direct_emissions_score=(scale * characterized_biosphere[:, producer_index]).sum(),
             )
             edges.append(
                 Edge(
@@ -500,9 +515,7 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[SupplyChainTraversalSett
         return lca.characterization_matrix * lca.biosphere_matrix
 
     @classmethod
-    def get_production_exchanges(
-        cls, mapped_matrix: mu.MappedMatrix
-    ) -> (np.array, np.array):
+    def get_production_exchanges(cls, mapped_matrix: mu.MappedMatrix) -> (np.array, np.array):
         """
         Get matrix row and column indices of productions exchanges by trying a
         series of heuristics. See documentation for
@@ -569,8 +582,7 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[SupplyChainTraversalSett
                         activity_id=node.activity_datapackage_id,
                         activity_index=node.activity_index,
                         amount=(
-                            lca.biosphere_matrix[index, node.activity_index]
-                            * node.supply_amount
+                            lca.biosphere_matrix[index, node.activity_index] * node.supply_amount
                         ),
                         score=score,
                     )
