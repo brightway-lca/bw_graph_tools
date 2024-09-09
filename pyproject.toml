@@ -64,7 +64,7 @@ dev = [
 [tool.setuptools]
 license-files = ["LICENSE"]
 include-package-data = true
-packages = ["bw_graph_tools"]
+packages = ["bw_graph_tools", "bw_graph_tools.graph_traversal"]
 
 [tool.setuptools.dynamic]
 version = {attr = "bw_graph_tools.__version__"}
