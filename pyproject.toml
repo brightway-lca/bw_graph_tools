@@ -30,6 +30,7 @@ classifiers = [
 requires-python = ">=3.9"
 dependencies = [
     "bw2calc>=2.0.dev13",
+    "bw2data>=4.0.dev46",
     "bw_processing",
     "matrix_utils",
     "numpy<2",
@@ -46,7 +47,6 @@ tracker = "https://github.com/brightway-lca/bw_graph_tools/issues"
 # seems to work, at least for now
 testing = [
     "bw_graph_tools",
-    "bw2data",
     "pytest",
     "pytest-cov",
     "python-coveralls",

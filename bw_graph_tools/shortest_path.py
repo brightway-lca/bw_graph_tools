@@ -114,7 +114,13 @@ def get_distances(
     if n_jobs == 1 or n == 1:
         try:
             res = sparse.csgraph.shortest_path(
-                adjacency, method, directed, return_predecessors, unweighted, False, sources
+                adjacency,
+                method,
+                directed,
+                return_predecessors,
+                unweighted,
+                False,
+                sources,
             )
         except sparse.csgraph.NegativeCycleError:
             raise ValueError(
