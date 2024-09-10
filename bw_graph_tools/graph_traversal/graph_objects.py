@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 
 @dataclass
@@ -54,6 +54,7 @@ class Node:
     supply_amount: float
     cumulative_score: float
     direct_emissions_score: float
+    max_depth: Optional[int] = None
     direct_emissions_score_outside_specific_flows: float = 0.0
     remaining_cumulative_score_outside_specific_flows: float = 0.0
     terminal: bool = False
@@ -76,6 +77,7 @@ class GroupedNodes:
     supply_amount: float
     cumulative_score: float
     direct_emissions_score: float
+    max_depth: Optional[int] = None
     direct_emissions_score_outside_specific_flows: float = 0.0
     terminal: bool = False
     activity_index: int = None

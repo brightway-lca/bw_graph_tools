@@ -4,7 +4,7 @@ import matrix_utils as mu
 import numpy as np
 from scipy import sparse
 
-from .errors import UnclearProductionExchange
+from bw_graph_tools.errors import UnclearProductionExchange
 
 
 def to_normalized_adjacency_matrix(
