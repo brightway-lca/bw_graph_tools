@@ -3,8 +3,8 @@ from typing import List, Optional
 from bw2calc import LCA
 from scipy import sparse
 
-from .matrix_tools import to_normalized_adjacency_matrix
-from .shortest_path import get_shortest_path
+from bw_graph_tools.matrix_tools import to_normalized_adjacency_matrix
+from bw_graph_tools.shortest_path import get_shortest_path
 
 try:
     import bw2data as bd

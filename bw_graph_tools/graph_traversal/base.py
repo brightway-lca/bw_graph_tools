@@ -1,8 +1,8 @@
 import typing
 from typing import Dict, Generic, List, TypeVar
 
-from .graph_objects import Edge, Flow, Node
-from .utils import CachingSolver
+from bw_graph_tools.graph_traversal.graph_objects import Edge, Flow, Node
+from bw_graph_tools.graph_traversal.utils import CachingSolver
 
 if typing.TYPE_CHECKING:
     import bw2calc

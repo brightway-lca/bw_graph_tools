@@ -3,7 +3,7 @@ from typing import Union
 
 import numpy as np
 
-from . import Edge, Flow, Node
+from bw_graph_tools import Edge, Flow, Node
 
 
 def equal_dict(a: Union[Node, Edge, Flow], b: dict, fields: list[str]):

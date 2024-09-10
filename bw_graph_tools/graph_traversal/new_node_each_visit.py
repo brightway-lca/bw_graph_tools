@@ -13,11 +13,11 @@ try:
 except ImportError:
     databases = {}
 
-from ..matrix_tools import guess_production_exchanges
-from .settings import GraphTraversalSettings
-from .base import BaseGraphTraversal
-from .graph_objects import Edge, Flow, Node
-from .utils import CachingSolver, Counter
+from bw_graph_tools.matrix_tools import guess_production_exchanges
+from bw_graph_tools.graph_traversal.settings import GraphTraversalSettings
+from bw_graph_tools.graph_traversal.base import BaseGraphTraversal
+from bw_graph_tools.graph_traversal.graph_objects import Edge, Flow, Node
+from bw_graph_tools.graph_traversal.utils import CachingSolver, Counter
 
 
 def get_demand_vector_for_activity(

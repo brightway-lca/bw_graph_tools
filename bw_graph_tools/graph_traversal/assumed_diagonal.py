@@ -1,7 +1,7 @@
 import matrix_utils as mu
 import numpy as np
 
-from .new_node_each_visit import NewNodeEachVisitGraphTraversal
+from bw_graph_tools.graph_traversal.new_node_each_visit import NewNodeEachVisitGraphTraversal
 
 
 class AssumedDiagonalGraphTraversal(NewNodeEachVisitGraphTraversal):

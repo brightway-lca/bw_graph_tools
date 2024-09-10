@@ -14,7 +14,7 @@ __all__ = (
 
 __version__ = "0.4.1"
 
-from .graph_traversal import (
+from bw_graph_tools.graph_traversal import (
     AssumedDiagonalGraphTraversal,
     Edge,
     Flow,
@@ -22,5 +22,5 @@ from .graph_traversal import (
     NewNodeEachVisitGraphTraversal,
     Node,
 )
-from .graph_traversal_utils import get_path_from_matrix, path_as_brightway_objects
-from .matrix_tools import guess_production_exchanges, to_normalized_adjacency_matrix
+from bw_graph_tools.graph_traversal_utils import get_path_from_matrix, path_as_brightway_objects
+from bw_graph_tools.matrix_tools import guess_production_exchanges, to_normalized_adjacency_matrix

@@ -1,9 +1,9 @@
 from pprint import pformat
 from typing import List, Optional, Union
 
-from .base import GraphTraversalException
-from .graph_objects import Node
-from .new_node_each_visit import NewNodeEachVisitGraphTraversal
+from bw_graph_tools.graph_traversal.base import GraphTraversalException
+from bw_graph_tools.graph_traversal.graph_objects import Node
+from bw_graph_tools.graph_traversal.new_node_each_visit import NewNodeEachVisitGraphTraversal
 
 
 class SameNodeEachVisitGraphTraversal(NewNodeEachVisitGraphTraversal):
