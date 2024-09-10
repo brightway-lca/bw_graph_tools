@@ -4,6 +4,7 @@ __all__ = (
     "Edge",
     "Flow",
     "get_path_from_matrix",
+    "GraphTraversalSettings",
     "guess_production_exchanges",
     "NewNodeEachVisitGraphTraversal",
     "Node",
@@ -17,6 +18,7 @@ from .graph_traversal import (
     AssumedDiagonalGraphTraversal,
     Edge,
     Flow,
+    GraphTraversalSettings,
     NewNodeEachVisitGraphTraversal,
     Node,
 )

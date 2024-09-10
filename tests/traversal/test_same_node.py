@@ -2,14 +2,14 @@ import pytest
 
 from bw_graph_tools.graph_traversal import (
     SameNodeEachVisitGraphTraversal,
-    SupplyChainTraversalSettings,
+    GraphTraversalSettings,
 )
 from bw_graph_tools.graph_traversal.base import GraphTraversalException
 
 
 def get_default_graph(lca):
     return SameNodeEachVisitGraphTraversal(
-        lca=lca, settings=SupplyChainTraversalSettings(cutoff=0.001, max_calc=3)
+        lca=lca, settings=GraphTraversalSettings(cutoff=0.001, max_calc=3)
     )
 
 

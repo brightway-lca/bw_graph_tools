@@ -5,8 +5,8 @@ import pytest
 from bw_graph_tools import NewNodeEachVisitGraphTraversal
 from bw_graph_tools.graph_traversal import (
     NewNodeEachVisitTaggedGraphTraversal,
-    SupplyChainTraversalSettings,
-    TaggedSupplyChainTraversalSettings,
+    GraphTraversalSettings,
+    TaggedGraphTraversalSettings,
 )
 from bw_graph_tools.graph_traversal.graph_objects import GroupedNodes, Node, Edge
 import bw2data as bd
@@ -17,13 +17,13 @@ from bw_graph_tools.graph_traversal.utils import Counter
 def get_default_graph(lca, tags):
     return NewNodeEachVisitTaggedGraphTraversal(
         lca=lca,
-        settings=TaggedSupplyChainTraversalSettings(cutoff=0.001, max_calc=10, tags=tags),
+        settings=TaggedGraphTraversalSettings(cutoff=0.001, max_calc=10, tags=tags),
     )
 
 
 def get_untagged_new_graph(lca):
     return NewNodeEachVisitGraphTraversal(
-        lca=lca, settings=SupplyChainTraversalSettings(cutoff=0.001, max_calc=10)
+        lca=lca, settings=GraphTraversalSettings(cutoff=0.001, max_calc=10)
     )
 
 

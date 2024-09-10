@@ -65,7 +65,7 @@ def get_demand_vector_for_activity(
 
 
 @dataclass
-class SupplyChainTraversalSettings:
+class GraphTraversalSettings:
     """
     Supply Chain Traversal Settings
 
@@ -106,7 +106,7 @@ class SupplyChainTraversalSettings:
             raise ValueError("max_calc must be a positive integer.")
 
 
-class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[SupplyChainTraversalSettings]):
+class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[GraphTraversalSettings]):
     """
     Traverse a supply chain, following paths of greatest impact.
 
@@ -292,7 +292,7 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[SupplyChainTraversalSett
         """
         instance = cls(
             lca_object,
-            SupplyChainTraversalSettings(
+            GraphTraversalSettings(
                 cutoff=cutoff,
                 biosphere_cutoff=biosphere_cutoff,
                 max_calc=max_calc,

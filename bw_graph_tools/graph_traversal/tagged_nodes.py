@@ -10,12 +10,12 @@ from bw_graph_tools.graph_traversal.base import BaseGraphTraversal
 from bw_graph_tools.graph_traversal.graph_objects import Edge, GroupedNodes, Node, Flow
 from bw_graph_tools.graph_traversal.new_node_each_visit import (
     NewNodeEachVisitGraphTraversal,
-    SupplyChainTraversalSettings,
+    GraphTraversalSettings,
 )
 
 
 @dataclass
-class TaggedSupplyChainTraversalSettings(SupplyChainTraversalSettings):
+class TaggedGraphTraversalSettings(GraphTraversalSettings):
     """
     Supply Chain Traversal Settings with a functional unit tag
 
@@ -30,7 +30,7 @@ class TaggedSupplyChainTraversalSettings(SupplyChainTraversalSettings):
 
 class NewNodeEachVisitTaggedGraphTraversal(
     NewNodeEachVisitGraphTraversal,
-    BaseGraphTraversal[TaggedSupplyChainTraversalSettings],
+    BaseGraphTraversal[TaggedGraphTraversalSettings],
 ):
     """
     Traverse the graph with leaves nodes grouped by their tags
