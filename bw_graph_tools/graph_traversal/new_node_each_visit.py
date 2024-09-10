@@ -1,5 +1,4 @@
 import warnings
-from dataclasses import dataclass, field
 from heapq import heappop, heappush
 from typing import Dict, Optional
 
@@ -15,6 +14,7 @@ except ImportError:
     databases = {}
 
 from ..matrix_tools import guess_production_exchanges
+from .settings import GraphTraversalSettings
 from .base import BaseGraphTraversal
 from .graph_objects import Edge, Flow, Node
 from .utils import CachingSolver, Counter
@@ -62,48 +62,6 @@ def get_demand_vector_for_activity(
         rows.append(x)
         vals.append(y)
     return rows, vals
-
-
-@dataclass
-class GraphTraversalSettings:
-    """
-    Supply Chain Traversal Settings
-
-    Parameters
-    ----------
-    cutoff : float
-        Cutoff value used to stop graph traversal. Fraction of total score,
-        should be in `(0, 1)`
-    biosphere_cutoff : float
-        Cutoff value used to determine if a separate biosphere node is
-        added. Fraction of total score.
-    max_calc : int
-        Maximum number of inventory calculations to perform
-    max_depth : int
-        Maximum depth in the supply chain traversal. Default is no maximum.
-    skip_coproducts : bool
-        Don't traverse co-production edges, i.e. production edges other
-        than the reference product
-    separate_biosphere_flows : bool
-        Add separate `Flow` nodes for important individual biosphere
-        emissions
-    """
-
-    cutoff: float = field(default=5e-3)
-    biosphere_cutoff: float = field(default=1e-4)
-    max_calc: int = field(default=10000)
-    max_depth: int = field(default=None)
-    skip_coproducts: bool = field(default=False)
-    separate_biosphere_flows: bool = field(default=False)
-
-    def __post_init__(self):
-        # Validate cutoff is between 0 and 1
-        if not (0 < self.cutoff < 1):
-            raise ValueError("cutoff must be a fraction between 0 and 1.")
-
-        # Validate max_calc is a positive integer
-        if self.max_calc <= 0:
-            raise ValueError("max_calc must be a positive integer.")
 
 
 class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[GraphTraversalSettings]):
