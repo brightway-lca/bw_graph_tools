@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from typing_extensions import Annotated
 from pydantic import BaseModel, Field, model_validator
 
@@ -41,3 +41,16 @@ class GraphTraversalSettings(BaseModel):
                 f"If specified, `max_depth` must be greater than zero"
             )
         return self
+
+
+class TaggedGraphTraversalSettings(GraphTraversalSettings):
+    """
+    Supply Chain Traversal Settings with a functional unit tag
+
+    Parameters
+    ----------
+    tags : List[str]
+        A list of tags to group nodes by
+    """
+
+    tags: List[str] = Field(default_factory=list)

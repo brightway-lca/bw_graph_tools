@@ -1,31 +1,16 @@
 import hashlib
 from collections import defaultdict
-from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Set, Tuple, Union, Iterable
 
 import bw2data as bd
 
 from bw_graph_tools.graph_traversal import SameNodeEachVisitGraphTraversal
+from bw_graph_tools.graph_traversal.settings import TaggedGraphTraversalSettings
 from bw_graph_tools.graph_traversal.base import BaseGraphTraversal
 from bw_graph_tools.graph_traversal.graph_objects import Edge, GroupedNodes, Node, Flow
 from bw_graph_tools.graph_traversal.new_node_each_visit import (
     NewNodeEachVisitGraphTraversal,
-    GraphTraversalSettings,
 )
-
-
-@dataclass
-class TaggedGraphTraversalSettings(GraphTraversalSettings):
-    """
-    Supply Chain Traversal Settings with a functional unit tag
-
-    Parameters
-    ----------
-    tags : List[str]
-        A list of tags to group nodes by
-    """
-
-    tags: List[str] = field(default_factory=list)
 
 
 class NewNodeEachVisitTaggedGraphTraversal(
