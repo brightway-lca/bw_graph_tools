@@ -50,6 +50,8 @@ class BaseGraphTraversal(Generic[Settings]):
         self.metadata = dict()
 
         # internal properties
+        self._functional_unit_unique_id = functional_unit_unique_id
+        self._max_calc = self.settings.max_calc
         self._root_node = Node(
             unique_id=functional_unit_unique_id,
             activity_datapackage_id=functional_unit_unique_id,
@@ -64,10 +66,9 @@ class BaseGraphTraversal(Generic[Settings]):
             cumulative_score=self.lca.score,
             direct_emissions_score=0.0,
         )
-        self._nodes: Dict[int, Node] = {functional_unit_unique_id: self._root_node}
+        self._nodes: Dict[int, Node] = {self._functional_unit_unique_id: self._root_node}
         self._edges: List[Edge] = []
         self._flows: List[Flow] = []
-        self._heap: List[Node] = []
         self._caching_solver = CachingSolver(lca)
 
     @property

@@ -21,7 +21,7 @@ class SameNodeEachVisitGraphTraversal(NewNodeEachVisitGraphTraversal):
     def traverse(
         self,
         nodes: List[Node] = None,
-        depth: int = None,
+        depth: Optional[int] = None,
     ) -> None:
         """
         Perform graph traversal from the given `Node` instances, or from the functional unit.

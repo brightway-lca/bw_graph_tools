@@ -42,8 +42,15 @@ class TestSameNodeTraversal:
         duplicate_graph.traverse(depth=100)
 
         graph.traverse(depth=1)
-        terminal_nodes = [node for _, node in graph.nodes.items() if node.terminal]
+        terminal_nodes = [node for node in graph.nodes.values() if node.terminal]
         graph.traverse(terminal_nodes, depth=100)
+
+        for key, node in duplicate_graph.nodes.items():
+            if key >= 0:
+                # Local traversal sets local max depth
+                node.max_depth = 101
+                # Local traversal reset depth counter to one level lower
+                node.depth -= 1
 
         assert graph.nodes == duplicate_graph.nodes
         assert graph.edges == duplicate_graph.edges

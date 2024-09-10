@@ -1,6 +1,6 @@
 import warnings
 from heapq import heappop, heappush
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 
 import matrix_utils as mu
 import numpy as np
@@ -71,8 +71,6 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[GraphTraversalSettings])
     * direct_emissions_score_outside_specific_flows
     * remaining_cumulative_score_outside_specific_flows
 
-
-
     .. warning:: Graph traversal with multioutput processes only works when other inputs are
         substituted (see `Multioutput processes in LCA <http://chris.mutel.org/multioutput.html>`__
         for a description of multiputput process math in LCA).
@@ -95,14 +93,14 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[GraphTraversalSettings])
 
     @classmethod
     @deprecated(
-        "You should instantiate NewNodeEachVisitGraphTraversal instead of calling `calculate`"
+        "Use `NewNodeEachVisitGraphTraversal(lca, settings)` instead of `NNEVGT().calculate(stuff)`"
     )
     def calculate(
         cls,
         lca_object: LCA,
         cutoff: Optional[float] = 5e-3,
         biosphere_cutoff: Optional[float] = 1e-4,
-        max_calc: Optional[int] = 10000,
+        max_calc: Optional[int] = 1000,
         max_depth: Optional[int] = None,
         skip_coproducts: Optional[bool] = False,
         separate_biosphere_flows: Optional[bool] = True,
@@ -210,6 +208,7 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[GraphTraversalSettings])
                 cutoff=cutoff,
                 biosphere_cutoff=biosphere_cutoff,
                 max_calc=max_calc,
+                max_depth=max_depth,
                 skip_coproducts=skip_coproducts,
                 separate_biosphere_flows=separate_biosphere_flows,
             ),
@@ -217,7 +216,7 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[GraphTraversalSettings])
             static_activity_indices=static_activity_indices,
         )
 
-        instance.traverse(max_depth=max_depth)
+        instance.traverse()
 
         return {
             "nodes": instance.nodes,
@@ -233,20 +232,57 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[GraphTraversalSettings])
         """
         return self._calculation_count.value
 
+    def _max_depth_for_node(self, node: Node, relative_depth: Optional[int] = None) -> int:
+        """Find `max_depth` for a given node when inputs are all optional."""
+        if relative_depth is None and self.settings.max_depth is None:
+            return None
+        elif self.settings.max_depth is None:
+            return node.depth + relative_depth
+        elif relative_depth is None:
+            return self.settings.max_depth
+        else:
+            return min(node.depth + relative_depth, self.settings.max_depth)
+
     def traverse(
         self,
-        nodes: list = None,
-        depth: int = None,
+        nodes: Optional[List[Node]] = None,
+        depth: Optional[int] = None,
+        reset_results: bool = False,
     ) -> None:
         """
-        Perform the graph traversal.
+        Perform the graph traversal following `NewNodeEachVisitGraphTraversal` logic.
+
+        If `nodes` is not specified, start at the given functional unit. If `nodes` is specified,
+        *only* traverse the graph starting from the given nodes. These nodes can be anywhere in the
+        supply chain.
+
+        Passing multiple `Node` objects in `nodes` must be done carefully. This function assumes
+        that all such nodes should be placed on the heap together. This means that we do
+        priority-first traversal based on the scores of these nodes - i.e. if node A has a much
+        higher score than B, it could be that the supply chain of B is never explored at all. To
+        avoid this behaviour, call `traverse()` separately with each input node.
+
+        Note that traversing from nodes which are already at or greater than `settings.max_depth`
+        will not do anything. `settings.max_depth` is a global maximum depth regardless of the value
+        pass as `depth`.
+
+        `depth` is *relative* to the depth of the given `nodes` - i.e. if the first node is at depth
+        7, and `depth` is 3, then *for that node*, we traverse up to depth 10. Relative depth is
+        calculated separately for each input node.
+
+        You may already have some results stored in `self.nodes`, `self.edges`, etc. Use
+        `reset_results` to purge this cache if you want to only see the results of this traversal.
+
+        The calculation count is reset each time `traverse()` is run.
 
         Parameters
         ----------
-        nodes : list
-            list of nodes to traverse, otherwise uses the root node as the starting point
+        nodes : List[Node]
+            List of nodes to traverse. Uses the functional unit (`self._root_node`) as the default
         depth : int
-            depth to traverse for each node provided up to the max specified in the setting's max_depth (if any)
+            Relative depth to traverse for each node provided up to `settings.max_depth`
+        reset_results : bool
+            Reset `self.nodes`, `self.edges`, and `self.flows`.
 
         Returns
         -------
@@ -254,30 +290,46 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[GraphTraversalSettings])
             Modifies the class object's state in-place
 
         """
+        if reset_results:
+            self._nodes: Dict[int, Node] = {}
+            self._edges: List[Edge] = []
+            self._flows: List[Flow] = []
+        if self.calculation_count > 0:
+            # Have already done traversal; need to bump maximum number of maximum calculations
+            self._max_calc += self.settings.max_calc
+
         if nodes is None:
-            nodes = [self._root_node]
+            self._nodes[self._functional_unit_unique_id] = self._root_node
+            self._traverse([(0, self._root_node)], self._max_depth_for_node(self._root_node, depth))
+        else:
+            heap = []
+            for node in nodes:
+                node.max_depth = self._max_depth_for_node(node, depth)
+                node.depth = 0
+                self._nodes[node.unique_id] = node
+                if self.settings.separate_biosphere_flows:
+                    self.add_biosphere_flows(
+                        flows=self._flows,
+                        matrix=(node.supply_amount * self.characterized_biosphere[:, node.activity_index]).tocoo(),
+                        lca=self.lca,
+                        node=node,
+                        biosphere_cutoff_score=self.biosphere_cutoff_score,
+                    )
 
-        for node in nodes:
-            heap = [(0, node)]
-            max_depth = None
-            if depth:
-                max_depth = node.depth + depth
-                if self.settings.max_depth is not None:
-                    max_depth = min(max_depth, self.settings.max_depth)
-
-            self._traverse(heap, max_depth=max_depth)
+                heappush(heap, (abs(1 / node.cumulative_score), node))
+            self._traverse(heap, max_depth=self.settings.max_depth)
 
         self._flows.sort(reverse=True)
 
         non_terminal_nodes = {edge.consumer_unique_id for edge in self._edges}
-        for node_id_key in self._nodes:
-            if node_id_key not in non_terminal_nodes:
-                terminal = True
-            else:
-                terminal = False
-            self._nodes[node_id_key].terminal = terminal
+        for key, obj in self._nodes.items():
+            obj.terminal = (key not in non_terminal_nodes)
 
-    def _traverse(self, heap, max_depth):
+    @property
+    def exceeded_calculation_count(self):
+        return self.calculation_count > self._max_calc
+
+    def _traverse(self, heap: list, max_depth: Optional[int] = None):
         """
         Traverse the graph.
 
@@ -286,10 +338,10 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[GraphTraversalSettings])
         heap:
             nodes to traverse
         max_depth:
-            maximum depth to traverse
+            global maximum depth to traverse
         """
         while heap:
-            if self._calculation_count > self.settings.max_calc:
+            if self.exceeded_calculation_count:
                 warnings.warn("Stopping traversal due to calculation count.")
                 break
             _, node = heappop(heap)
@@ -303,11 +355,12 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[GraphTraversalSettings])
             self.traverse_edges(
                 consumer_index=node.activity_index,
                 consumer_unique_id=node.unique_id,
+                consumer_max_depth=node.max_depth,
                 product_indices=product_indices,
                 product_amounts=product_amounts,
                 lca=self.lca,
                 current_depth=node.depth,
-                max_depth=max_depth,
+                max_depth=max_depth or self.settings.max_depth,
                 calculation_count=self._calculation_count,
                 characterized_biosphere=self.characterized_biosphere,
                 matrix=self.lca.technosphere_matrix,
@@ -323,16 +376,16 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[GraphTraversalSettings])
                 biosphere_cutoff_score=self.biosphere_cutoff_score,
             )
 
-    @classmethod
     def traverse_edges(
-        cls,
+        self,
+        *,
         consumer_index: int,
         consumer_unique_id: int,
+        consumer_max_depth: Optional[int],
         product_indices: list[int],
         product_amounts: list[float],
         lca: LCA,
         current_depth: int,
-        max_depth: int,
         calculation_count: Counter,
         characterized_biosphere: spmatrix,
         matrix: spmatrix,
@@ -346,6 +399,7 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[GraphTraversalSettings])
         caching_solver: CachingSolver,
         biosphere_cutoff_score: float,
         cutoff_score: float,
+        max_depth: Optional[int] = None,
     ) -> None:
         for product_index, product_amount in zip(product_indices, product_amounts):
             producer_index = production_exchange_mapping[product_index]
@@ -370,6 +424,7 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[GraphTraversalSettings])
                 reference_product_production_amount=reference_product_net_production_amount,
                 supply_amount=scale,
                 depth=current_depth + 1,
+                max_depth=consumer_max_depth,
                 cumulative_score=cumulative_score,
                 direct_emissions_score=(scale * characterized_biosphere[:, producer_index]).sum(),
             )
@@ -385,7 +440,7 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[GraphTraversalSettings])
             )
 
             if separate_biosphere_flows:
-                flow_score = cls.add_biosphere_flows(
+                flow_score = self.add_biosphere_flows(
                     flows=flows,
                     matrix=(scale * characterized_biosphere[:, producer_index]).tocoo(),
                     lca=lca,
@@ -404,7 +459,13 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[GraphTraversalSettings])
 
             nodes[producing_node.unique_id] = producing_node
 
-            if (max_depth is None) or (producing_node.depth < max_depth):
+            if producing_node.max_depth is not None:
+                # Local max depth overrides everything, and already include global max depth
+                satisfies_depth_constraint = producing_node.max_depth > producing_node.depth
+            else:
+                satisfies_depth_constraint = (max_depth is None) or (producing_node.depth < max_depth)
+
+            if satisfies_depth_constraint:
                 heappush(heap, (abs(1 / cumulative_score), producing_node))
 
     @classmethod
