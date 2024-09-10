@@ -32,7 +32,7 @@ class GraphTraversalSettings(BaseModel):
     max_calc: Annotated[int, Field(strict=True, gt=0)] = 1000
     max_depth: Optional[int] = None
     skip_coproducts: bool = False
-    separate_biosphere_flows: bool = False
+    separate_biosphere_flows: bool = True
 
     @model_validator(mode="after")
     def max_depth_positive(self):

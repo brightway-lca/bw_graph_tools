@@ -11,7 +11,7 @@ def test_settings_normal():
     assert gts.max_calc == 1000
     assert gts.max_depth is None
     assert gts.skip_coproducts is False
-    assert gts.separate_biosphere_flows is False
+    assert gts.separate_biosphere_flows is True
 
 
 def test_settings_custom():
@@ -21,14 +21,14 @@ def test_settings_custom():
         max_calc=5,
         max_depth=50,
         skip_coproducts=True,
-        separate_biosphere_flows=True,
+        separate_biosphere_flows=False,
     )
     assert gts.cutoff == 0.4
     assert gts.biosphere_cutoff == 0.6
     assert gts.max_calc == 5
     assert gts.max_depth == 50
     assert gts.skip_coproducts is True
-    assert gts.separate_biosphere_flows is True
+    assert gts.separate_biosphere_flows is False
 
 
 def test_settings_error():
