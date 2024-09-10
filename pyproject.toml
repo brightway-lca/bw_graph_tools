@@ -33,7 +33,7 @@ dependencies = [
     "bw2data>=4.0.dev46",
     "bw_processing",
     "matrix_utils",
-    "numpy<2",
+    "numpy<3",
     "pydantic",
     "scipy",
 ]
