@@ -3,7 +3,7 @@ from bw2calc import LCA
 from bw2data import Database, Method, get_node
 from bw2data.tests import bw2test
 
-from bw_graph_tools import NewNodeEachVisitGraphTraversal, GraphTraversalSettings
+from bw_graph_tools import GraphTraversalSettings, NewNodeEachVisitGraphTraversal
 from bw_graph_tools.testing import edge_equal_dict, flow_equal_dict, node_equal_dict
 
 
@@ -120,11 +120,7 @@ def test_basic_traversal():
     assert np.allclose(lca.score, 24.96)
 
     gtr = NewNodeEachVisitGraphTraversal(
-        lca=lca,
-        settings=GraphTraversalSettings(
-            max_depth=2,
-            cutoff=0.001
-        )
+        lca=lca, settings=GraphTraversalSettings(max_depth=2, cutoff=0.001)
     )
     gtr.traverse()
 

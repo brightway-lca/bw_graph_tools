@@ -1,7 +1,8 @@
-from scipy.sparse import spmatrix
 from functools import lru_cache
+
 import numpy as np
 from bw2calc import LCA
+from scipy.sparse import spmatrix
 
 from bw_graph_tools.graph_traversal.graph_objects import Node
 

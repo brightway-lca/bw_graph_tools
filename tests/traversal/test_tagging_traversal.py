@@ -1,16 +1,15 @@
 from itertools import groupby
 
+import bw2data as bd
 import pytest
 
 from bw_graph_tools import NewNodeEachVisitGraphTraversal
 from bw_graph_tools.graph_traversal import (
-    NewNodeEachVisitTaggedGraphTraversal,
     GraphTraversalSettings,
+    NewNodeEachVisitTaggedGraphTraversal,
     TaggedGraphTraversalSettings,
 )
-from bw_graph_tools.graph_traversal.graph_objects import GroupedNodes, Node, Edge
-import bw2data as bd
-
+from bw_graph_tools.graph_traversal.graph_objects import Edge, GroupedNodes, Node
 from bw_graph_tools.graph_traversal.utils import Counter
 
 

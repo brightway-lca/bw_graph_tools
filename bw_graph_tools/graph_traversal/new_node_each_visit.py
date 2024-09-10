@@ -1,6 +1,6 @@
 import warnings
 from heapq import heappop, heappush
-from typing import Dict, Optional, List
+from typing import Dict, List, Optional
 
 import matrix_utils as mu
 import numpy as np
@@ -13,11 +13,15 @@ try:
 except ImportError:
     databases = {}
 
-from bw_graph_tools.matrix_tools import guess_production_exchanges
-from bw_graph_tools.graph_traversal.settings import GraphTraversalSettings
 from bw_graph_tools.graph_traversal.base import BaseGraphTraversal
 from bw_graph_tools.graph_traversal.graph_objects import Edge, Flow, Node
-from bw_graph_tools.graph_traversal.utils import CachingSolver, Counter, get_demand_vector_for_activity
+from bw_graph_tools.graph_traversal.settings import GraphTraversalSettings
+from bw_graph_tools.graph_traversal.utils import (
+    CachingSolver,
+    Counter,
+    get_demand_vector_for_activity,
+)
+from bw_graph_tools.matrix_tools import guess_production_exchanges
 
 
 class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[GraphTraversalSettings]):
@@ -310,7 +314,10 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[GraphTraversalSettings])
                 if self.settings.separate_biosphere_flows:
                     self.add_biosphere_flows(
                         flows=self._flows,
-                        matrix=(node.supply_amount * self.characterized_biosphere[:, node.activity_index]).tocoo(),
+                        matrix=(
+                            node.supply_amount
+                            * self.characterized_biosphere[:, node.activity_index]
+                        ).tocoo(),
                         lca=self.lca,
                         node=node,
                         biosphere_cutoff_score=self.biosphere_cutoff_score,
@@ -323,7 +330,7 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[GraphTraversalSettings])
 
         non_terminal_nodes = {edge.consumer_unique_id for edge in self._edges}
         for key, obj in self._nodes.items():
-            obj.terminal = (key not in non_terminal_nodes)
+            obj.terminal = key not in non_terminal_nodes
 
     @property
     def exceeded_calculation_count(self):
@@ -463,7 +470,9 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[GraphTraversalSettings])
                 # Local max depth overrides everything, and already include global max depth
                 satisfies_depth_constraint = producing_node.max_depth > producing_node.depth
             else:
-                satisfies_depth_constraint = (max_depth is None) or (producing_node.depth < max_depth)
+                satisfies_depth_constraint = (max_depth is None) or (
+                    producing_node.depth < max_depth
+                )
 
             if satisfies_depth_constraint:
                 heappush(heap, (abs(1 / cumulative_score), producing_node))

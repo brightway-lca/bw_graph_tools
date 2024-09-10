@@ -1,16 +1,14 @@
 import hashlib
 from collections import defaultdict
-from typing import Dict, List, Optional, Set, Tuple, Union, Iterable
+from typing import Dict, Iterable, List, Optional, Set, Tuple, Union
 
 import bw2data as bd
 
 from bw_graph_tools.graph_traversal import SameNodeEachVisitGraphTraversal
-from bw_graph_tools.graph_traversal.settings import TaggedGraphTraversalSettings
 from bw_graph_tools.graph_traversal.base import BaseGraphTraversal
-from bw_graph_tools.graph_traversal.graph_objects import Edge, GroupedNodes, Node, Flow
-from bw_graph_tools.graph_traversal.new_node_each_visit import (
-    NewNodeEachVisitGraphTraversal,
-)
+from bw_graph_tools.graph_traversal.graph_objects import Edge, Flow, GroupedNodes, Node
+from bw_graph_tools.graph_traversal.new_node_each_visit import NewNodeEachVisitGraphTraversal
+from bw_graph_tools.graph_traversal.settings import TaggedGraphTraversalSettings
 
 
 class NewNodeEachVisitTaggedGraphTraversal(

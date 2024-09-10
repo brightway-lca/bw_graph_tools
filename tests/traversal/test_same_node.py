@@ -1,9 +1,6 @@
 import pytest
 
-from bw_graph_tools.graph_traversal import (
-    SameNodeEachVisitGraphTraversal,
-    GraphTraversalSettings,
-)
+from bw_graph_tools.graph_traversal import GraphTraversalSettings, SameNodeEachVisitGraphTraversal
 from bw_graph_tools.graph_traversal.base import GraphTraversalException
 
 

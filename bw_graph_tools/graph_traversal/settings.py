@@ -1,6 +1,7 @@
-from typing import Optional, List
-from typing_extensions import Annotated
+from typing import List, Optional
+
 from pydantic import BaseModel, Field, model_validator
+from typing_extensions import Annotated
 
 
 class GraphTraversalSettings(BaseModel):
@@ -37,9 +38,7 @@ class GraphTraversalSettings(BaseModel):
     @model_validator(mode="after")
     def max_depth_positive(self):
         if self.max_depth is not None and self.max_depth <= 0:
-            raise ValueError(
-                f"If specified, `max_depth` must be greater than zero"
-            )
+            raise ValueError(f"If specified, `max_depth` must be greater than zero")
         return self
 
 
