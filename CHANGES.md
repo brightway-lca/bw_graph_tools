@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5] - 2024-09-10
+
+This release is a big shift from purely functional programming to storing state in the graph traversal class instances. Storing state was necessary to support `SameNodeEachVisitGraphTraversal`, which needs to remember when a node has been visited.
+
+The old API still works but is deprecated; please shift from `NewNodeEachVisitGraphTraversal.calculate()` to `NewNodeEachVisitGraphTraversal().traverse()`. Note that the graph traversal input configuration is now wrapped in a Pydantic class `GraphTraversalSettings`.
+
+* [#21 Clean up changes from shift to stateful calculations](https://github.com/brightway-lca/bw_graph_tools/pull/21)
+* [#20 Add `SameNodeEachVisitGraphTraversal`](https://github.com/brightway-lca/bw_graph_tools/pull/20)
+* [#17 Major documentation upgrade](https://github.com/brightway-lca/bw_graph_tools/pull/17)
+
 ## [0.4.1] - 2024-05-24
 
 * Fix [#16](https://github.com/brightway-lca/bw_graph_tools/issues/16) - Add optional `max_depth` argument to graph traversal
