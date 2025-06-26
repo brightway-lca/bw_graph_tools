@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6] - 2025-06-26
+
+* Remove Numpy `<2` version pin
+* Fix tests for upstream API changes
+
 ## [0.5] - 2024-09-10
 
 This release is a big shift from purely functional programming to storing state in the graph traversal class instances. Storing state was necessary to support `SameNodeEachVisitGraphTraversal`, which needs to remember when a node has been visited.
