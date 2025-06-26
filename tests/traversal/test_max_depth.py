@@ -1,6 +1,6 @@
 import numpy as np
 from bw2calc import LCA
-from bw2data import Database, Method
+from bw2data import Database, Method, get_node
 from bw2data.tests import bw2test
 
 from bw_graph_tools import NewNodeEachVisitGraphTraversal
@@ -117,6 +117,12 @@ def test_basic_traversal():
     lca.lci()
     lca.lcia()
 
+    a_id = get_node(code="a").id
+    b_id = get_node(code="b").id
+    t1_id = get_node(code="1").id
+    t2_id = get_node(code="2").id
+    t3_id = get_node(code="3").id
+
     assert np.allclose(lca.score, 24.96)
 
     gtr = NewNodeEachVisitGraphTraversal.calculate(
@@ -132,38 +138,38 @@ def test_basic_traversal():
 
     expected_flows = [
         {
-            "activity_id": 4,
+            "activity_id": t2_id,
             "activity_index": 1,
             "activity_unique_id": 0,
             "amount": 4.0,
-            "flow_datapackage_id": 1,
+            "flow_datapackage_id": a_id,
             "flow_index": 0,
             "score": 8.0,
         },
         {
-            "activity_id": 3,
+            "activity_id": t1_id,
             "activity_index": 0,
             "activity_unique_id": 1,
             "amount": 2.0,
-            "flow_datapackage_id": 1,
+            "flow_datapackage_id": a_id,
             "flow_index": 0,
             "score": 4.0,
         },
         {
-            "activity_id": 5,
+            "activity_id": t3_id,
             "activity_index": 2,
             "activity_unique_id": 2,
             "amount": 0.16,
-            "flow_datapackage_id": 2,
+            "flow_datapackage_id": b_id,
             "flow_index": 1,
             "score": 0.32,
         },
         {
-            "activity_id": 4,
+            "activity_id": t2_id,
             "activity_index": 1,
             "activity_unique_id": 0,
             "amount": 0.08,
-            "flow_datapackage_id": 2,
+            "flow_datapackage_id": b_id,
             "flow_index": 1,
             "score": 0.16,
         },
@@ -218,12 +224,12 @@ def test_basic_traversal():
             "unique_id": -1,
         },
         {
-            "activity_datapackage_id": 4,
+            "activity_datapackage_id": t2_id,
             "activity_index": 1,
             "cumulative_score": 24.96,
             "direct_emissions_score": 8.16,
             "direct_emissions_score_outside_specific_flows": 0.0,
-            "reference_product_datapackage_id": 4,
+            "reference_product_datapackage_id": t2_id,
             "reference_product_index": 1,
             "depth": 1,
             "reference_product_production_amount": 2.0,
@@ -233,12 +239,12 @@ def test_basic_traversal():
             "unique_id": 0,
         },
         {
-            "activity_datapackage_id": 3,
+            "activity_datapackage_id": t1_id,
             "activity_index": 0,
             "cumulative_score": 16.48,
             "direct_emissions_score": 4.0,
             "direct_emissions_score_outside_specific_flows": 0.0,
-            "reference_product_datapackage_id": 3,
+            "reference_product_datapackage_id": t1_id,
             "reference_product_index": 0,
             "depth": 2,
             "reference_product_production_amount": 2.0,
@@ -248,12 +254,12 @@ def test_basic_traversal():
             "unique_id": 1,
         },
         {
-            "activity_datapackage_id": 5,
+            "activity_datapackage_id": t3_id,
             "activity_index": 2,
             "cumulative_score": 0.32,
             "direct_emissions_score": 0.32,
             "direct_emissions_score_outside_specific_flows": 0.0,
-            "reference_product_datapackage_id": 5,
+            "reference_product_datapackage_id": t3_id,
             "reference_product_index": 2,
             "depth": 2,
             "reference_product_production_amount": 1.0,

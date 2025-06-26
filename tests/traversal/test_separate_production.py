@@ -1,6 +1,6 @@
 import numpy as np
 from bw2calc import LCA
-from bw2data import Database, Method
+from bw2data import Database, Method, get_node
 from bw2data.tests import bw2test
 
 from bw_graph_tools import NewNodeEachVisitGraphTraversal
@@ -87,39 +87,46 @@ def test_basic_nonunitary_production_with_recursion():
     assert len(edges) == 5  # Initial, three calculations, final not evaluated
     assert len(nodes) == 6
 
+    flow_id = get_node(code="a").id
+    a1_id = get_node(code="1").id
+    a2_id = get_node(code="2").id
+    # Crimes against humanity here
+    p1_id = get_node(code="p2").id
+    p2_id = get_node(code="p1").id
+
     expected_flows = [
         {
-            "flow_datapackage_id": 1,  # From SQLite, starts at 1
+            "flow_datapackage_id": flow_id,  # From SQLite, starts at 1
             "flow_index": 0,
             "activity_unique_id": 0,  # Start with activity 2, visit first
-            "activity_id": 3,
+            "activity_id": a2_id,
             "activity_index": 1,
             "amount": 2,
             "score": 4,
         },
         {
-            "flow_datapackage_id": 1,
+            "flow_datapackage_id": flow_id,
             "flow_index": 0,
             "activity_unique_id": 1,
-            "activity_id": 2,
+            "activity_id": a1_id,
             "activity_index": 0,
             "amount": 1,
             "score": 2,
         },
         {
-            "flow_datapackage_id": 1,
+            "flow_datapackage_id": flow_id,
             "flow_index": 0,
             "activity_unique_id": 2,
-            "activity_id": 3,
+            "activity_id": a2_id,
             "activity_index": 1,
             "amount": 0.5,
             "score": 1,
         },
         {
-            "flow_datapackage_id": 1,
+            "flow_datapackage_id": flow_id,
             "flow_index": 0,
             "activity_unique_id": 3,
-            "activity_id": 2,
+            "activity_id": a1_id,
             "activity_index": 0,
             "amount": 0.25,
             "score": 0.5,
@@ -182,9 +189,9 @@ def test_basic_nonunitary_production_with_recursion():
         },
         {
             "unique_id": 0,
-            "activity_datapackage_id": 3,
+            "activity_datapackage_id": a2_id,
             "activity_index": 1,
-            "reference_product_datapackage_id": 4,
+            "reference_product_datapackage_id": p1_id,
             "reference_product_index": 0,
             "reference_product_production_amount": 4,
             "supply_amount": 2,
@@ -193,9 +200,9 @@ def test_basic_nonunitary_production_with_recursion():
         },
         {
             "unique_id": 1,
-            "activity_datapackage_id": 2,
+            "activity_datapackage_id": a1_id,
             "activity_index": 0,
-            "reference_product_datapackage_id": 5,
+            "reference_product_datapackage_id": p2_id,
             "reference_product_index": 1,
             "reference_product_production_amount": 2,
             "supply_amount": 2,
@@ -204,9 +211,9 @@ def test_basic_nonunitary_production_with_recursion():
         },
         {
             "unique_id": 2,
-            "activity_datapackage_id": 3,
+            "activity_datapackage_id": a2_id,
             "activity_index": 1,
-            "reference_product_datapackage_id": 4,
+            "reference_product_datapackage_id": p1_id,
             "reference_product_index": 0,
             "reference_product_production_amount": 4,
             "supply_amount": 0.5,
@@ -215,9 +222,9 @@ def test_basic_nonunitary_production_with_recursion():
         },
         {
             "unique_id": 3,
-            "activity_datapackage_id": 2,
+            "activity_datapackage_id": a1_id,
             "activity_index": 0,
-            "reference_product_datapackage_id": 5,
+            "reference_product_datapackage_id": p2_id,
             "reference_product_index": 1,
             "reference_product_production_amount": 2,
             "supply_amount": 0.5,
@@ -226,9 +233,9 @@ def test_basic_nonunitary_production_with_recursion():
         },
         {
             "unique_id": 4,
-            "activity_datapackage_id": 3,
+            "activity_datapackage_id": a2_id,
             "activity_index": 1,
-            "reference_product_datapackage_id": 4,
+            "reference_product_datapackage_id": p1_id,
             "reference_product_index": 0,
             "reference_product_production_amount": 4,
             "supply_amount": 0.125,

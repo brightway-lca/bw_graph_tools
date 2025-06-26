@@ -1,6 +1,6 @@
 import numpy as np
 from bw2calc import LCA
-from bw2data import Database, Method
+from bw2data import Database, Method, get_node
 from bw2data.tests import bw2test
 
 from bw_graph_tools import NewNodeEachVisitGraphTraversal
@@ -46,6 +46,9 @@ def test_only_one_node_error_message():
     lca.lci()
     lca.lcia()
 
+    a_id = get_node(code="a").id
+    t1_id = get_node(code="1").id
+
     assert np.array_equal([[2]], lca.technosphere_matrix.todense())
     assert np.allclose(lca.score, 0.5)
 
@@ -61,10 +64,10 @@ def test_only_one_node_error_message():
 
     expected_flows = [
         {
-            "flow_datapackage_id": 1,  # From SQLite, starts at 1
+            "flow_datapackage_id": a_id,  # From SQLite, starts at 1
             "flow_index": 0,
             "activity_unique_id": 0,  # Start with activity 2, visit first
-            "activity_id": 2,
+            "activity_id": t1_id,
             "activity_index": 0,
             "amount": 0.25,
             "score": 0.5,
