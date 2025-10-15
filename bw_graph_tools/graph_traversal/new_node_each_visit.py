@@ -90,7 +90,8 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[GraphTraversalSettings])
         self.cutoff_score = abs(total_score * self.settings.cutoff)
         self.biosphere_cutoff_score = abs(total_score * self.settings.biosphere_cutoff)
         self.production_exchange_mapping = {
-            x: y for x, y in zip(*self.get_production_exchanges(self.lca.technosphere_mm))
+            x: y
+            for x, y in zip(*self.get_production_exchanges(self.lca.technosphere_mm))
         }
         self._calculation_count = Counter()
         self.characterized_biosphere = self.get_characterized_biosphere(self.lca)
@@ -236,7 +237,9 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[GraphTraversalSettings])
         """
         return self._calculation_count.value
 
-    def _max_depth_for_node(self, node: Node, relative_depth: Optional[int] = None) -> int:
+    def _max_depth_for_node(
+        self, node: Node, relative_depth: Optional[int] = None
+    ) -> int:
         """Find `max_depth` for a given node when inputs are all optional."""
         if relative_depth is None and self.settings.max_depth is None:
             return None
@@ -304,7 +307,9 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[GraphTraversalSettings])
 
         if nodes is None:
             self._nodes[self._functional_unit_unique_id] = self._root_node
-            self._traverse([(0, self._root_node)], self._max_depth_for_node(self._root_node, depth))
+            self._traverse(
+                [(0, self._root_node)], self._max_depth_for_node(self._root_node, depth)
+            )
         else:
             heap = []
             for node in nodes:
@@ -411,12 +416,11 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[GraphTraversalSettings])
         for product_index, product_amount in zip(product_indices, product_amounts):
             producer_index = production_exchange_mapping[product_index]
 
-            if producer_index in static_activity_indices:
-                continue
-
             supply = caching_solver(product_index, product_amount)
             cumulative_score = float((characterized_biosphere * supply).sum())
-            reference_product_net_production_amount = matrix[product_index, producer_index]
+            reference_product_net_production_amount = matrix[
+                product_index, producer_index
+            ]
             scale = product_amount / reference_product_net_production_amount
 
             if abs(cumulative_score) < cutoff_score:
@@ -426,14 +430,18 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[GraphTraversalSettings])
                 unique_id=next(calculation_count),
                 activity_datapackage_id=lca.dicts.activity.reversed[producer_index],
                 activity_index=producer_index,
-                reference_product_datapackage_id=lca.dicts.product.reversed[product_index],
+                reference_product_datapackage_id=lca.dicts.product.reversed[
+                    product_index
+                ],
                 reference_product_index=product_index,
                 reference_product_production_amount=reference_product_net_production_amount,
                 supply_amount=scale,
                 depth=current_depth + 1,
                 max_depth=consumer_max_depth,
                 cumulative_score=cumulative_score,
-                direct_emissions_score=(scale * characterized_biosphere[:, producer_index]).sum(),
+                direct_emissions_score=(
+                    scale * characterized_biosphere[:, producer_index]
+                ).sum(),
             )
             edges.append(
                 Edge(
@@ -468,13 +476,19 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[GraphTraversalSettings])
 
             if producing_node.max_depth is not None:
                 # Local max depth overrides everything, and already include global max depth
-                satisfies_depth_constraint = producing_node.max_depth > producing_node.depth
+                satisfies_depth_constraint = (
+                    producing_node.max_depth > producing_node.depth
+                )
             else:
                 satisfies_depth_constraint = (max_depth is None) or (
                     producing_node.depth < max_depth
                 )
 
-            if satisfies_depth_constraint:
+            # Only traverse further if not a static activity
+            if (
+                satisfies_depth_constraint
+                and producer_index not in static_activity_indices
+            ):
                 heappush(heap, (abs(1 / cumulative_score), producing_node))
 
     @classmethod
@@ -499,7 +513,9 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[GraphTraversalSettings])
         return lca.characterization_matrix * lca.biosphere_matrix
 
     @classmethod
-    def get_production_exchanges(cls, mapped_matrix: mu.MappedMatrix) -> (np.array, np.array):
+    def get_production_exchanges(
+        cls, mapped_matrix: mu.MappedMatrix
+    ) -> (np.array, np.array):
         """
         Get matrix row and column indices of productions exchanges by trying a
         series of heuristics. See documentation for
@@ -566,7 +582,8 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[GraphTraversalSettings])
                         activity_id=node.activity_datapackage_id,
                         activity_index=node.activity_index,
                         amount=(
-                            lca.biosphere_matrix[index, node.activity_index] * node.supply_amount
+                            lca.biosphere_matrix[index, node.activity_index]
+                            * node.supply_amount
                         ),
                         score=score,
                     )
