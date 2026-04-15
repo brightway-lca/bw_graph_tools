@@ -1,6 +1,6 @@
 import warnings
 from heapq import heappop, heappush
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 
 import matrix_utils as mu
 import numpy as np
@@ -17,7 +17,6 @@ from bw_graph_tools.graph_traversal.base import BaseGraphTraversal
 from bw_graph_tools.graph_traversal.graph_objects import Edge, Flow, Node
 from bw_graph_tools.graph_traversal.settings import GraphTraversalSettings
 from bw_graph_tools.graph_traversal.utils import (
-    CachingSolver,
     Counter,
     get_demand_vector_for_activity,
 )
@@ -408,7 +407,7 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[GraphTraversalSettings])
         production_exchange_mapping: dict[int, int],
         static_activity_indices: set[int],
         separate_biosphere_flows: bool,
-        caching_solver: CachingSolver,
+        caching_solver: Any,
         biosphere_cutoff_score: float,
         cutoff_score: float,
         max_depth: Optional[int] = None,

@@ -1,3 +1,4 @@
+from typing import Set
 from functools import lru_cache
 
 import numpy as np
@@ -12,13 +13,29 @@ class CachingSolver:
 
     def __init__(self, lca: LCA):
         self.lca = lca
+        self._cache = {}
+
+    def in_cache(self, indices: Set[int]) -> set:
+        """Return all `indices` values which are in the cache"""
+        return indices.intersection(set(self._cache))
+
+    def add_to_cache(self, index: int, result: np.ndarray) -> None:
+        # Must be for a demand amount of 1!!!
+        self._cache[index] = result
+
+    def _calculate(self, index: int) -> np.ndarray:
+        self.lca.demand_array[:] = 0
+        self.lca.demand_array[index] = 1
+        return self.lca.solve_linear_system()
 
     @lru_cache(maxsize=8096)
     def calculate(self, index: int) -> np.ndarray:
         """Compute cumulative LCA score for one unit of a given activity"""
-        self.lca.demand_array[:] = 0
-        self.lca.demand_array[index] = 1
-        return self.lca.solve_linear_system()
+        try:
+            return self._cache[index]
+        except KeyError:
+            self.add_to_cache(index, self._calculate(index))
+            return self._cache[index]
 
     def __call__(self, index: int, amount: float) -> np.ndarray:
         return self.calculate(index) * amount

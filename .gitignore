@@ -132,3 +132,6 @@ pyrightconfig.json
 
 # Sphinx
 _build*
+CLAUDE.md
+AGENTS.md
+.claude/worktrees
