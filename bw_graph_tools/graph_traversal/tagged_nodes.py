@@ -261,10 +261,16 @@ class SameNodeEachVisitTaggedGraphTraversal(
         self, parent_node: Node, nodes: List[Node], tag_group: str
     ) -> int:
         """
-        Generate a consistent id for a grouped node
+        Generate a consistent id for a grouped node.
+
+        Uses only parent unique_id and tag label — depth is excluded because node
+        depth is reset to 0 when re-traversed, which would otherwise change the ID
+        and break the should_group_leaves idempotency check.  Uses 16 hex characters
+        (64-bit range) to avoid collisions with the sequential counter IDs used for
+        regular nodes (which start at 0 and count upward).
         """
-        label_parent_depth = "{}:{}:{}".format(parent_node.unique_id, nodes[0].depth, tag_group)
-        lookup = hashlib.sha256(label_parent_depth.encode()).hexdigest()[16]
+        label = "{}:{}".format(parent_node.unique_id, tag_group)
+        lookup = hashlib.sha256(label.encode()).hexdigest()[:16]
         return int(lookup, 16)
 
     def should_group_leaves(self, parent_node: Node, nodes: List[Node], tag_group: str) -> bool:
@@ -278,6 +284,10 @@ class SameNodeEachVisitTaggedGraphTraversal(
             if node.unique_id in self.visited_nodes:
                 return False
             self.visited_nodes.add(node.unique_id)
+            # Remove member unique_ids from visited_nodes so the
+            # SameNodeEachVisitGraphTraversal.traverse visited-check doesn't raise
+            # when we re-traverse the group's contents.
+            self.visited_nodes -= {n.unique_id for n in node.nodes}
             super().traverse(
                 nodes=node.nodes,
                 depth=depth,
