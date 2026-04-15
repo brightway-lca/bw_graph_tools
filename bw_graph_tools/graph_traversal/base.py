@@ -69,7 +69,7 @@ class BaseGraphTraversal(Generic[Settings]):
         self._nodes: Dict[int, Node] = {self._functional_unit_unique_id: self._root_node}
         self._edges: List[Edge] = []
         self._flows: List[Flow] = []
-        self._caching_solver = CachingSolver(lca)
+        self._caching_solver = settings.caching_solver or CachingSolver(lca)
 
     @property
     def nodes(self):
