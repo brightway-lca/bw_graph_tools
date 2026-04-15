@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Any
 
 from pydantic import BaseModel, Field, model_validator
 from typing_extensions import Annotated
@@ -34,6 +34,7 @@ class GraphTraversalSettings(BaseModel):
     max_depth: Optional[int] = None
     skip_coproducts: bool = False
     separate_biosphere_flows: bool = True
+    caching_solver: Any | None = None
 
     @model_validator(mode="after")
     def max_depth_positive(self):

@@ -1,5 +1,3 @@
-from functools import lru_cache
-
 import numpy as np
 from bw2calc import LCA
 from scipy.sparse import spmatrix
@@ -12,13 +10,26 @@ class CachingSolver:
 
     def __init__(self, lca: LCA):
         self.lca = lca
+        self._cache = {}
 
-    @lru_cache(maxsize=8096)
-    def calculate(self, index: int) -> np.ndarray:
-        """Compute cumulative LCA score for one unit of a given activity"""
+    def in_cache(self, indices: set[int]) -> set[int]:
+        """Return all `indices` values which are in the cache."""
+        return indices & self._cache.keys()
+
+    def add_to_cache(self, index: int, result: np.ndarray) -> None:
+        """Store a pre-computed supply vector. Result must be for a demand amount of 1."""
+        self._cache[index] = result
+
+    def _calculate(self, index: int) -> np.ndarray:
         self.lca.demand_array[:] = 0
         self.lca.demand_array[index] = 1
         return self.lca.solve_linear_system()
+
+    def calculate(self, index: int) -> np.ndarray:
+        """Compute cumulative LCA score for one unit of a given activity."""
+        if index not in self._cache:
+            self._cache[index] = self._calculate(index)
+        return self._cache[index]
 
     def __call__(self, index: int, amount: float) -> np.ndarray:
         return self.calculate(index) * amount
