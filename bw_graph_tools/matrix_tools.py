@@ -129,10 +129,10 @@ def gpe_second_heuristic(
             h2_col_indices = h2_col_indices[h2_col_counts == 1]
 
             # Remove elements found by first heuristic
-            existing_mask = np.in1d(h2_col_indices, col_existing)
+            existing_mask = np.isin(h2_col_indices, col_existing)
 
             # Need mask with correct shape for both row and col indices
-            mask = np.in1d(group.col_masked[~group.flip], h2_col_indices[~existing_mask])
+            mask = np.isin(group.col_masked[~group.flip], h2_col_indices[~existing_mask])
 
             not_flipped.append(
                 (
@@ -163,11 +163,11 @@ def gpe_third_heuristic(
     positive_mask = matrix.data > 0
     row, col = matrix.row[positive_mask], matrix.col[positive_mask]
 
-    existing_mask = ~np.in1d(col, col_existing)
+    existing_mask = ~np.isin(col, col_existing)
     row, col = row[existing_mask], col[existing_mask]
 
     col_indices, col_counts = np.unique(col, return_counts=True)
-    single_mask = np.in1d(col, col_indices[col_counts == 1])
+    single_mask = np.isin(col, col_indices[col_counts == 1])
     row, col = row[single_mask], col[single_mask]
 
     if row.size:
