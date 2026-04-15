@@ -337,6 +337,19 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[GraphTraversalSettings])
         for key, obj in self._nodes.items():
             obj.terminal = key not in non_terminal_nodes
 
+        if self.lca.score != 0:
+            traversed_direct_score = sum(
+                node.direct_emissions_score
+                for node in self._nodes.values()
+                if node.unique_id != self._functional_unit_unique_id
+            )
+            coverage = traversed_direct_score / self.lca.score
+            if coverage < self.settings.min_coverage_fraction:
+                warnings.warn(
+                    f"Graph traversal covered only {coverage:.1%} of the total LCA score. "
+                    f"Consider lowering the `cutoff` (currently {self.settings.cutoff}) to improve coverage."
+                )
+
     @property
     def exceeded_calculation_count(self):
         return self.calculation_count > self._max_calc

@@ -26,6 +26,10 @@ class GraphTraversalSettings(BaseModel):
     separate_biosphere_flows : bool
         Add separate `Flow` nodes for important individual biosphere
         emissions
+    min_coverage_fraction : float
+        Minimum fraction of the total LCA score that must be covered by the
+        traversed nodes. A warning is raised if coverage falls below this
+        value. Should be in `(0, 1]`. Default is 0.9.
     """
 
     cutoff: Annotated[float, Field(strict=True, gt=0, lt=1)] = 5e-3
@@ -35,6 +39,7 @@ class GraphTraversalSettings(BaseModel):
     skip_coproducts: bool = False
     separate_biosphere_flows: bool = True
     caching_solver: Any | None = None
+    min_coverage_fraction: Annotated[float, Field(strict=True, gt=0, le=1)] = 0.9
 
     @model_validator(mode="after")
     def max_depth_positive(self):
