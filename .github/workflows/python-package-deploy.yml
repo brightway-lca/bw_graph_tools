@@ -6,6 +6,8 @@ name: Publish Python 🐍 distributions 📦 to PyPI and TestPyPI
 on:
   push:
     branches: [main, develop]
+    tags:
+      - "*"
 jobs:
   build-n-publish:
     name: Build and publish Python 🐍 distributions 📦 to PyPI and TestPyPI
@@ -14,7 +16,7 @@ jobs:
       id-token: write
     steps:
     - uses: actions/checkout@v6
-    - name: Set up Python 3.11
+    - name: Set up Python 3.14
       uses: actions/setup-python@v6
       with:
         python-version: "3.14"
