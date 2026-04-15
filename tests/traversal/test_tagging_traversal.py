@@ -3,32 +3,41 @@ from itertools import groupby
 import bw2data as bd
 import pytest
 
-from bw_graph_tools import NewNodeEachVisitGraphTraversal
 from bw_graph_tools.graph_traversal import (
     GraphTraversalSettings,
+    NewNodeEachVisitGraphTraversal,
     NewNodeEachVisitTaggedGraphTraversal,
+    SameNodeEachVisitTaggedGraphTraversal,
     TaggedGraphTraversalSettings,
 )
 from bw_graph_tools.graph_traversal.graph_objects import Edge, GroupedNodes, Node
 from bw_graph_tools.graph_traversal.utils import Counter
 
 
-def get_default_graph(lca, tags):
-    return NewNodeEachVisitTaggedGraphTraversal(
+def get_default_graph(lca, tags, variant=NewNodeEachVisitTaggedGraphTraversal):
+    return variant(
         lca=lca,
         settings=TaggedGraphTraversalSettings(cutoff=0.001, max_calc=10, tags=tags),
     )
 
 
-def get_untagged_new_graph(lca):
-    return NewNodeEachVisitGraphTraversal(
-        lca=lca, settings=GraphTraversalSettings(cutoff=0.001, max_calc=10)
-    )
+def get_untagged_new_graph(lca, variant=NewNodeEachVisitGraphTraversal):
+    return variant(lca=lca, settings=GraphTraversalSettings(cutoff=0.001, max_calc=10))
 
 
 @pytest.fixture
 def graph(sample_database_with_tagged_products):
     g = get_default_graph(sample_database_with_tagged_products, ["test"])
+    yield g
+
+
+@pytest.fixture
+def same_node_graph(sample_database_with_tagged_products):
+    g = get_default_graph(
+        sample_database_with_tagged_products,
+        ["test"],
+        variant=SameNodeEachVisitTaggedGraphTraversal,
+    )
     yield g
 
 
@@ -200,3 +209,70 @@ class TestNewNodeTaggingTraversal:
 
         assert len(groups["test: group-a"][0].nodes) == 1
         assert len(groups["test: group-b"][0].nodes) == 3
+
+
+class TestSameNodeTaggingTraversal:
+    @staticmethod
+    def grouped_nodes(graph):
+        return [node for node in graph.nodes.values() if isinstance(node, GroupedNodes)]
+
+    def test_tagged_traversal(self, same_node_graph):
+        same_node_graph.traverse(depth=2)
+        assert len(same_node_graph.nodes) == 5
+        assert len(self.grouped_nodes(same_node_graph)) == 2
+
+        # find a single-member GroupedNodes dynamically instead of using a hardcoded ID
+        single_group = next(
+            gn for gn in self.grouped_nodes(same_node_graph) if len(gn.nodes) == 1
+        )
+        assert isinstance(single_group, GroupedNodes)
+
+        # expanding the grouped node replaces it with its actual child node
+        same_node_graph.traverse_from_node(single_group, depth=1)
+        assert len(self.grouped_nodes(same_node_graph)) == 1
+        assert len(same_node_graph.nodes) == 5
+
+    def test_traverse_from_node_returns_false_for_visited_grouped_node(self, same_node_graph):
+        same_node_graph.traverse(depth=2)
+        gn = self.grouped_nodes(same_node_graph)[0]
+
+        result_first = same_node_graph.traverse_from_node(gn, depth=1)
+        assert result_first is True
+
+        result_second = same_node_graph.traverse_from_node(gn, depth=1)
+        assert result_second is False
+
+    def test_traverse_from_node_regular_node(self, same_node_graph):
+        same_node_graph.traverse(depth=1)
+        # all non-root nodes at depth 1 are terminal, pick one that isn't a GroupedNode
+        regular_node = next(
+            node
+            for node in same_node_graph.nodes.values()
+            if node.unique_id != same_node_graph._functional_unit_unique_id
+            and not isinstance(node, GroupedNodes)
+            and node.terminal
+        )
+        result = same_node_graph.traverse_from_node(regular_node, depth=1)
+        assert result is True
+
+        # second call returns False — node already visited
+        result = same_node_graph.traverse_from_node(regular_node, depth=1)
+        assert result is False
+
+    def test_reset_does_not_inflate_max_calc(self, sample_database_with_tagged_products):
+        # Regression test for the bug fix in NewNodeEachVisitGraphTraversal.traverse:
+        # calling traverse(reset_results=True) after a prior traversal must restore
+        # _max_calc to settings.max_calc, not double it.
+        graph = get_untagged_new_graph(sample_database_with_tagged_products)
+        original_max_calc = graph._max_calc
+        graph.traverse()
+        # A continuation traverse (no reset) should bump the budget
+        assert graph.calculation_count > 0
+        graph.traverse()
+        assert graph._max_calc == original_max_calc * 2
+
+        # A reset traverse must restore the original budget, not keep doubling
+        graph.traverse(reset_results=True)
+        assert graph._max_calc == original_max_calc, (
+            "_max_calc was not restored after reset_results=True"
+        )

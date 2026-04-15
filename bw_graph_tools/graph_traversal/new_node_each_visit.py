@@ -301,7 +301,8 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[GraphTraversalSettings])
             self._nodes: Dict[int, Node] = {}
             self._edges: List[Edge] = []
             self._flows: List[Flow] = []
-        if self.calculation_count > 0:
+            self._max_calc = self.settings.max_calc
+        elif self.calculation_count > 0:
             # Have already done traversal; need to bump maximum number of maximum calculations
             self._max_calc += self.settings.max_calc
 
