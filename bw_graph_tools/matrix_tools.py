@@ -182,6 +182,14 @@ def gpe_third_heuristic(
 
     Takes row and column indices already found (``row_existing``, ``col_existing``) and appends
     any new findings. Returns the combined arrays.
+
+    .. note::
+        This heuristic can misidentify the production exchange for a waste treatment activity
+        that also produces a co-product. If such a column has one positive entry (the co-product)
+        and one negative entry (the waste being treated), this heuristic selects the co-product
+        row rather than the waste row. The correct assignment would be found by
+        :func:`gpe_fourth_heuristic`, but because this heuristic runs first it claims the column
+        and the fourth heuristic never inspects it. This is a known ordering limitation.
     """
     if col_existing.size == mm.matrix.shape[1]:
         return row_existing, col_existing
