@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8] - 2026-05-13
+
+* [#43 Add fourth and fifth production-exchange heuristics](https://github.com/brightway-lca/bw_graph_tools/pull/43): `gpe_fourth_heuristic` identifies waste treatment activities by finding columns with a single negative entry in the assembled matrix; `gpe_fifth_heuristic` deterministically resolves remaining columns by finding products that appear in exactly one unidentified column (columns with multiple candidate rows are left unassigned rather than guessed); both are wired into `guess_production_exchanges`
+* [#43](https://github.com/brightway-lca/bw_graph_tools/pull/43): Added docstrings to `gpe_second_heuristic`, `gpe_third_heuristic`, and all new heuristic functions; added early-return guards to heuristics 2–4; documented a known ordering limitation in `gpe_third_heuristic` (can misidentify waste-treatment co-product as production exchange before the fourth heuristic runs) with an xfail test
+* [#43](https://github.com/brightway-lca/bw_graph_tools/pull/43): Removed unused `reorder_mapped_matrix` stub
+
 ## [0.7] - 2026-04-15
 
 * [#36 Injectable `CachingSolver` with external cache pre-population](https://github.com/brightway-lca/bw_graph_tools/pull/36): New `caching_solver` field on `GraphTraversalSettings` allows sharing a solver across multiple traversals; `CachingSolver` now exposes `in_cache()` and `add_to_cache()` for external pre-population
