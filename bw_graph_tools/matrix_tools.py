@@ -338,11 +338,3 @@ def guess_production_exchanges(mm: mu.MappedMatrix) -> Tuple[np.ndarray, np.ndar
         )
 
     return (row_indices, col_indices)
-
-
-def reorder_mapped_matrix(matrix: mu.MappedMatrix) -> sparse.csr_matrix:
-    """Reorder a mapped matrix so that production exchanges lie on the diagonal.
-
-    Not yet implemented.
-    """
-    return None
