@@ -117,7 +117,24 @@ Please report this as an issue, something went very wrong!
 def gpe_second_heuristic(
     mm: mu.MappedMatrix, row_existing: np.ndarray, col_existing: np.ndarray
 ) -> Tuple[np.ndarray, np.ndarray]:
-    # Second heuristic: If there is a single value *per column* where flip is false
+    """Use second heuristic (single non-flipped entry per column) to find production exchange indices.
+
+    In Brightway convention, consumption exchanges are stored as positive values with ``flip=True``
+    so they appear negative in the built matrix. Production exchanges normally have ``flip=False``.
+    If exactly one exchange in a column has ``flip=False`` and that column was not already identified
+    by the first heuristic, that exchange is the production exchange.
+
+    Operates on raw resource-group data before values are assembled into the matrix, so it is
+    unaffected by summing across packages. Columns whose production exchange was already found
+    (present in ``col_existing``) are skipped. Resource groups without a flip array are silently
+    ignored via ``KeyError``.
+
+    Takes row and column indices already found (``row_existing``, ``col_existing``) and appends any
+    new findings. Returns the combined arrays.
+    """
+    if col_existing.size == mm.matrix.shape[1]:
+        return row_existing, col_existing
+
     not_flipped = []
 
     for group in mm.groups:
@@ -157,7 +174,26 @@ def gpe_second_heuristic(
 def gpe_third_heuristic(
     mm: mu.MappedMatrix, row_existing: np.ndarray, col_existing: np.ndarray
 ) -> Tuple[np.ndarray, np.ndarray]:
-    # Third heuristic: Single positive value
+    """Use third heuristic (single positive value per column) to find production exchange indices.
+
+    Operates on the assembled matrix rather than raw resource-group data. If a column has
+    exactly one positive entry and that column was not already identified by earlier heuristics,
+    that entry is the production exchange.
+
+    Takes row and column indices already found (``row_existing``, ``col_existing``) and appends
+    any new findings. Returns the combined arrays.
+
+    .. note::
+        This heuristic can misidentify the production exchange for a waste treatment activity
+        that also produces a co-product. If such a column has one positive entry (the co-product)
+        and one negative entry (the waste being treated), this heuristic selects the co-product
+        row rather than the waste row. The correct assignment would be found by
+        :func:`gpe_fourth_heuristic`, but because this heuristic runs first it claims the column
+        and the fourth heuristic never inspects it. This is a known ordering limitation.
+    """
+    if col_existing.size == mm.matrix.shape[1]:
+        return row_existing, col_existing
+
     matrix = mm.matrix.tocoo()
 
     positive_mask = matrix.data > 0
@@ -176,6 +212,85 @@ def gpe_third_heuristic(
         return row_existing, col_existing
 
 
+def gpe_fourth_heuristic(
+    mm: mu.MappedMatrix, row_existing: np.ndarray, col_existing: np.ndarray
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Use fourth heuristic (single negative value per column) to find waste-treatment production exchanges.
+
+    Waste treatment activities accept waste as their reference product. In the technosphere matrix
+    this appears as a negative entry (the activity consumes the waste flow). If a column has exactly
+    one negative entry and that column was not already identified by earlier heuristics, that entry
+    is the production exchange for a waste treatment activity.
+
+    Operates on the assembled matrix. Takes row and column indices already found
+    (``row_existing``, ``col_existing``) and appends any new findings. Returns the combined arrays.
+    """
+    if col_existing.size == mm.matrix.shape[1]:
+        return row_existing, col_existing
+
+    matrix = mm.matrix.tocoo()
+
+    negative_mask = matrix.data < 0
+    row, col = matrix.row[negative_mask], matrix.col[negative_mask]
+
+    existing_mask = ~np.isin(col, col_existing)
+    row, col = row[existing_mask], col[existing_mask]
+
+    col_indices, col_counts = np.unique(col, return_counts=True)
+    single_mask = np.isin(col, col_indices[col_counts == 1])
+    row, col = row[single_mask], col[single_mask]
+
+    if row.size:
+        return np.hstack([row_existing, row]), np.hstack([col_existing, col])
+    else:
+        return row_existing, col_existing
+
+
+def gpe_fifth_heuristic(
+    mm: mu.MappedMatrix, row_existing: np.ndarray, col_existing: np.ndarray
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Use fifth heuristic (unique product across remaining columns) to find production exchange indices.
+
+    For each product (row) that appears in exactly one of the still-unidentified columns, that
+    column is unambiguously the producer or consumer of that product, so the entry is the
+    production exchange. To remain fully deterministic, a column is only assigned when exactly
+    one such uniquely-pointing row identifies it — if two different unique rows both point to the
+    same column we cannot choose between them and that column is left unassigned.
+
+    Operates on the assembled matrix. Takes row and column indices already found
+    (``row_existing``, ``col_existing``) and appends any new findings. Returns the combined arrays.
+    """
+    matrix = mm.matrix.tocoo()
+
+    all_cols = np.arange(mm.matrix.shape[1])
+    missing_cols = np.setdiff1d(all_cols, col_existing)
+
+    if not missing_cols.size:
+        return row_existing, col_existing
+
+    # Restrict to entries in unidentified columns
+    missing_mask = np.isin(matrix.col, missing_cols)
+    row, col = matrix.row[missing_mask], matrix.col[missing_mask]
+
+    # Keep only rows that appear in exactly one of the remaining columns
+    row_indices, row_counts = np.unique(row, return_counts=True)
+    unique_rows = row_indices[row_counts == 1]
+
+    unique_row_mask = np.isin(row, unique_rows)
+    new_row, new_col = row[unique_row_mask], col[unique_row_mask]
+
+    # Only assign a column when exactly one unique-row points to it;
+    # if two unique rows both point to the same column we can't choose.
+    col_indices, col_counts = np.unique(new_col, return_counts=True)
+    single_col_mask = np.isin(new_col, col_indices[col_counts == 1])
+    new_row, new_col = new_row[single_col_mask], new_col[single_col_mask]
+
+    if new_row.size:
+        return np.hstack([row_existing, new_row]), np.hstack([col_existing, new_col])
+    else:
+        return row_existing, col_existing
+
+
 def guess_production_exchanges(mm: mu.MappedMatrix) -> Tuple[np.ndarray, np.ndarray]:
     """Try to guess productions exchanges in a mapped technosphere matrix using heuristics from the input data packages.
 
@@ -184,6 +299,8 @@ def guess_production_exchanges(mm: mu.MappedMatrix) -> Tuple[np.ndarray, np.ndar
     * Same input and output index
     * Single value where ``flip`` is negative
     * Single positive value
+    * Single negative value (waste treatment)
+    * Unique product across remaining unidentified columns
 
     Raises ``UnclearProductionExchange`` if these conditions are not met for any activity.
 
@@ -207,6 +324,8 @@ def guess_production_exchanges(mm: mu.MappedMatrix) -> Tuple[np.ndarray, np.ndar
 
     row_indices, col_indices = gpe_second_heuristic(mm, row_indices, col_indices)
     row_indices, col_indices = gpe_third_heuristic(mm, row_indices, col_indices)
+    row_indices, col_indices = gpe_fourth_heuristic(mm, row_indices, col_indices)
+    row_indices, col_indices = gpe_fifth_heuristic(mm, row_indices, col_indices)
 
     # No idea how this could happen, but better raise an error than pass bad data
     if row_indices.shape != col_indices.shape:
@@ -219,7 +338,3 @@ def guess_production_exchanges(mm: mu.MappedMatrix) -> Tuple[np.ndarray, np.ndar
         )
 
     return (row_indices, col_indices)
-
-
-def reorder_mapped_matrix(matrix: mu.MappedMatrix) -> sparse.csr_matrix:
-    return None
