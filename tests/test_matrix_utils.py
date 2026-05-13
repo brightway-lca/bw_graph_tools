@@ -43,3 +43,23 @@ def test_gpe_raise_error():
     )
     with pytest.raises(UnclearProductionExchange):
         guess_production_exchanges(mm)
+
+
+def test_gpe_unclear_production_exchange():
+    # 3x3 matrix with no diagonal entries and two positive values per column.
+    # All four heuristics fail: no row==col (first), no flip array (second),
+    # multiple positives per column (third), no negatives (fourth).
+    dp = bwp.create_datapackage()
+    indices = np.array(
+        [(1, 0), (2, 0), (0, 1), (2, 1), (0, 2), (1, 2)],
+        dtype=bwp.INDICES_DTYPE,
+    )
+    dp.add_persistent_vector(
+        matrix="test",
+        indices_array=indices,
+        name="foo",
+        data_array=np.array([1, 2, 3, 4, 5, 6], dtype=float),
+    )
+    mm = mu.MappedMatrix(packages=[dp], matrix="test")
+    with pytest.raises(UnclearProductionExchange):
+        guess_production_exchanges(mm)
