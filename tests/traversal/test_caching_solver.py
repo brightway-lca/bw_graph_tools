@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 import scipy.sparse as sp
-from bw2calc import LCA, spsolve
+from bw2calc import LCA, factorized, spsolve
 from bw2data import Database, Method
 from bw2data.tests import bw2test
 
@@ -10,11 +10,25 @@ from bw_graph_tools.graph_traversal.utils import CachingSolver
 
 
 class MatrixMockLCA:
-    """LCA-like object exposing a real technosphere matrix for the batched `scores` path."""
+    """LCA-like object exposing a real technosphere matrix for the batched `scores` path.
+
+    Mirrors the relevant bits of ``bw2calc.LCA``: ``decompose_technosphere`` builds ``solver`` and
+    ``solve_linear_system`` reuses it, as the iterative (non-PARDISO) path expects.
+    """
 
     def __init__(self, technosphere):
         self.technosphere_matrix = technosphere
         self.demand_array = np.zeros(technosphere.shape[0])
+
+    def decompose_technosphere(self):
+        self.solver = factorized(self.technosphere_matrix.tocsc())
+
+    def solve_linear_system(self, demand=None):
+        if demand is None:
+            demand = self.demand_array
+        if hasattr(self, "solver"):
+            return self.solver(demand)
+        return spsolve(self.technosphere_matrix, demand)
 
 
 def _score_solver():
@@ -53,6 +67,24 @@ def test_add_to_cache_prevents_recalculation():
     solver._unit_scores_pardiso = solver._unit_scores_iterative
 
     assert solver.scores([0], [2.0]) == [84.0]
+
+
+def test_iterative_path_decomposes_technosphere_once():
+    """Without PARDISO, the LCA is decomposed once and `lca.solver` is reused for solves."""
+    A = sp.csc_matrix(np.array([[2.0, 0.0, 0.0], [0.0, 3.0, 0.0], [1.0, 0.0, 4.0]]))
+    lca = MatrixMockLCA(A)
+    solver = CachingSolver(lca)
+    solver.score_row = np.array([1.0, 1.0, 1.0])
+
+    decompositions = []
+    original = lca.decompose_technosphere
+    lca.decompose_technosphere = lambda: decompositions.append(1) or original()
+
+    assert not hasattr(lca, "solver")
+    solver._unit_scores_iterative([0, 1])
+    assert hasattr(lca, "solver"), "technosphere should be decomposed"
+    solver._unit_scores_iterative([2])
+    assert decompositions == [1], "should decompose only once and reuse `lca.solver`"
 
 
 def test_set_score_row_from_characterized_biosphere():

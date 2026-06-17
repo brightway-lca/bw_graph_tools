@@ -1,5 +1,5 @@
 import numpy as np
-from bw2calc import PYPARDISO, LCA, factorized, spsolve
+from bw2calc import PYPARDISO, LCA, spsolve
 from scipy.sparse import spmatrix
 
 from bw_graph_tools.graph_traversal.graph_objects import Node
@@ -17,16 +17,13 @@ class CachingSolver:
       multi-right-hand-side ``spsolve`` call, which reuses the cached factorization and is much
       faster than solving one product at a time.
     * Otherwise (UMFPACK / SuperLU), a single multi-right-hand-side solve is *slower* than reusing
-      a cached factorization, so the technosphere matrix is factorized once and each product is
-      solved iteratively.
+      a cached factorization, so the LCA's technosphere matrix is decomposed once (via
+      ``decompose_technosphere``) and each product is solved iteratively through ``lca.solver``.
     """
 
     def __init__(self, lca: LCA):
         self.lca = lca
         self._score_cache = {}
-        # Cached LU factorization of the technosphere matrix, used by the iterative (non-PARDISO)
-        # path. Built lazily on first use.
-        self._factorized_solver = None
         # 1-D array of per-activity characterized scores (column sums of the characterized
         # biosphere matrix). Set by `set_score_row` before `scores` is called.
         self.score_row = None
@@ -89,18 +86,20 @@ class CachingSolver:
         return np.asarray(self.score_row @ supply).ravel()
 
     def _unit_scores_iterative(self, indices: list[int]) -> np.ndarray:
-        """Solve each of `indices` separately, reusing one cached LU factorization.
+        """Solve each of `indices` separately, reusing the LCA's cached factorization.
 
         A single multi-right-hand-side solve is slower than this under UMFPACK / SuperLU, so we
-        mirror ``bw2calc.FastSupplyArraysMixin._calculate_umfpack``.
+        mirror ``bw2calc.FastSupplyArraysMixin._calculate_umfpack``. We make sure the technosphere
+        matrix has been decomposed so that ``solve_linear_system`` reuses ``lca.solver`` instead of
+        re-factorizing on every solve.
         """
-        if self._factorized_solver is None:
-            self._factorized_solver = factorized(self.lca.technosphere_matrix.tocsc())
+        if not hasattr(self.lca, "solver"):
+            self.lca.decompose_technosphere()
         demand = np.zeros(self.lca.technosphere_matrix.shape[0])
         unit_scores = np.empty(len(indices))
         for position, index in enumerate(indices):
             demand[index] = 1
-            unit_scores[position] = self.score_row @ self._factorized_solver(demand)
+            unit_scores[position] = self.score_row @ self.lca.solve_linear_system(demand)
             demand[index] = 0
         return unit_scores
 
