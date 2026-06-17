@@ -1,5 +1,5 @@
 import numpy as np
-from bw2calc import LCA, spsolve
+from bw2calc import PYPARDISO, LCA, factorized, spsolve
 from scipy.sparse import spmatrix
 
 from bw_graph_tools.graph_traversal.graph_objects import Node
@@ -16,15 +16,23 @@ class CachingSolver:
       used by the batched ``scores`` interface.
 
     The graph traversal only needs cumulative scores, not the full supply vectors. The batched
-    ``scores`` method solves all requested products in a single multi-right-hand-side solve, which
-    is much faster than solving one product at a time (especially with PARDISO via ``pypardiso``,
-    which reuses its cached factorization across calls).
+    ``scores`` method follows the same strategy as ``bw2calc.FastSupplyArraysMixin``:
+
+    * With PARDISO (``pypardiso``), all requested products are solved in a single
+      multi-right-hand-side ``spsolve`` call, which reuses the cached factorization and is much
+      faster than solving one product at a time.
+    * Otherwise (UMFPACK / SuperLU), a single multi-right-hand-side solve is *slower* than reusing
+      a cached factorization, so the technosphere matrix is factorized once and each product is
+      solved iteratively.
     """
 
     def __init__(self, lca: LCA):
         self.lca = lca
         self._cache = {}
         self._score_cache = {}
+        # Cached LU factorization of the technosphere matrix, used by the iterative (non-PARDISO)
+        # path. Built lazily on first use.
+        self._factorized_solver = None
         # 1-D array of per-activity characterized scores (column sums of the characterized
         # biosphere matrix). Set by `set_score_row` before `scores` is called.
         self.score_row = None
@@ -78,20 +86,43 @@ class CachingSolver:
         """
         missing = [index for index in indices if index not in self._score_cache]
         if missing:
-            matrix = self.lca.technosphere_matrix
-            demand = np.zeros((matrix.shape[0], len(missing)))
-            for column, index in enumerate(missing):
-                demand[index, column] = 1
-            supply = spsolve(matrix, demand)
-            # `spsolve` may squeeze a single right-hand-side down to one dimension.
-            if supply.ndim == 1:
-                supply = supply.reshape(-1, 1)
-            unit_scores = np.asarray(self.score_row @ supply).ravel()
+            if PYPARDISO:
+                unit_scores = self._unit_scores_pardiso(missing)
+            else:
+                unit_scores = self._unit_scores_iterative(missing)
             for index, score in zip(missing, unit_scores):
                 self._score_cache[index] = float(score)
         return [
             self._score_cache[index] * amount for index, amount in zip(indices, amounts)
         ]
+
+    def _unit_scores_pardiso(self, indices: list[int]) -> np.ndarray:
+        """Solve all `indices` in a single multi-right-hand-side PARDISO solve."""
+        matrix = self.lca.technosphere_matrix
+        demand = np.zeros((matrix.shape[0], len(indices)))
+        for column, index in enumerate(indices):
+            demand[index, column] = 1
+        supply = spsolve(matrix, demand)
+        # `spsolve` may squeeze a single right-hand-side down to one dimension.
+        if supply.ndim == 1:
+            supply = supply.reshape(-1, 1)
+        return np.asarray(self.score_row @ supply).ravel()
+
+    def _unit_scores_iterative(self, indices: list[int]) -> np.ndarray:
+        """Solve each of `indices` separately, reusing one cached LU factorization.
+
+        A single multi-right-hand-side solve is slower than this under UMFPACK / SuperLU, so we
+        mirror ``bw2calc.FastSupplyArraysMixin._calculate_umfpack``.
+        """
+        if self._factorized_solver is None:
+            self._factorized_solver = factorized(self.lca.technosphere_matrix.tocsc())
+        demand = np.zeros(self.lca.technosphere_matrix.shape[0])
+        unit_scores = np.empty(len(indices))
+        for position, index in enumerate(indices):
+            demand[index] = 1
+            unit_scores[position] = self.score_row @ self._factorized_solver(demand)
+            demand[index] = 0
+        return unit_scores
 
 
 class Counter:

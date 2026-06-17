@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-* Batched, multi-product graph-traversal scoring: each node's input products are now solved in a single multi-right-hand-side solve (`bw2calc.spsolve`) instead of one product at a time. With PARDISO (`pypardiso`) this reuses the cached factorization and runs the back-substitution for all of a node's inputs at once. `CachingSolver` gains a `scores()` batch method and a `set_score_row()` helper, and caches per-unit cumulative scores. Results are numerically identical to the previous per-product implementation. Custom solvers passed via `GraphTraversalSettings.caching_solver` without a `scores()` method continue to work via a fallback path.
+* Batched, multi-product graph-traversal scoring: each node's input products are now scored together instead of one product at a time, following the same strategy as `bw2calc.FastSupplyArraysMixin`. With PARDISO (`pypardiso`) all of a node's inputs are solved in a single multi-right-hand-side `spsolve`, reusing the cached factorization. Without PARDISO (UMFPACK / SuperLU), where a multi-RHS solve is slower, the technosphere matrix is factorized once and inputs are solved iteratively. `CachingSolver` gains a `scores()` batch method and a `set_score_row()` helper, and caches per-unit cumulative scores. Results are numerically identical to the previous per-product implementation. Custom solvers passed via `GraphTraversalSettings.caching_solver` without a `scores()` method continue to work via a fallback path.
 
 ## [0.8] - 2026-05-13
 
