@@ -55,9 +55,7 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[GraphTraversalSettings])
 
     * `technosphere_matrix`
     * `technosphere_mm`
-    * `solve_linear_system()`
     * `demand`
-    * `demand_array`
 
     You can subclass `NewNodeEachVisitGraphTraversal` and redefine
     `get_characterized_biosphere` if your LCA class does not have a traditional

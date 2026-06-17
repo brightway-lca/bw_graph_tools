@@ -6,17 +6,12 @@ from bw_graph_tools.graph_traversal.graph_objects import Node
 
 
 class CachingSolver:
-    """Class which caches expensive linear algebra solutions.
+    """Class which caches cumulative LCA scores during graph traversal.
 
-    Two caches are maintained:
-
-    * ``_cache`` stores full supply vectors keyed by product index, used by the legacy
-      ``calculate``/``__call__`` interface.
-    * ``_score_cache`` stores per-unit *cumulative LCA scores* (scalars) keyed by product index,
-      used by the batched ``scores`` interface.
-
-    The graph traversal only needs cumulative scores, not the full supply vectors. The batched
-    ``scores`` method follows the same strategy as ``bw2calc.FastSupplyArraysMixin``:
+    ``_score_cache`` stores per-unit *cumulative LCA scores* (scalars) keyed by product index.
+    The graph traversal only needs cumulative scores, not full supply vectors, so the batched
+    ``scores`` method solves for several products at once following the same strategy as
+    ``bw2calc.FastSupplyArraysMixin``:
 
     * With PARDISO (``pypardiso``), all requested products are solved in a single
       multi-right-hand-side ``spsolve`` call, which reuses the cached factorization and is much
@@ -28,7 +23,6 @@ class CachingSolver:
 
     def __init__(self, lca: LCA):
         self.lca = lca
-        self._cache = {}
         self._score_cache = {}
         # Cached LU factorization of the technosphere matrix, used by the iterative (non-PARDISO)
         # path. Built lazily on first use.
@@ -38,26 +32,12 @@ class CachingSolver:
         self.score_row = None
 
     def in_cache(self, indices: set[int]) -> set[int]:
-        """Return all `indices` values which are in the supply vector cache."""
-        return indices & self._cache.keys()
+        """Return all `indices` values which already have a cached score."""
+        return indices & self._score_cache.keys()
 
-    def add_to_cache(self, index: int, result: np.ndarray) -> None:
-        """Store a pre-computed supply vector. Result must be for a demand amount of 1."""
-        self._cache[index] = result
-
-    def _calculate(self, index: int) -> np.ndarray:
-        self.lca.demand_array[:] = 0
-        self.lca.demand_array[index] = 1
-        return self.lca.solve_linear_system()
-
-    def calculate(self, index: int) -> np.ndarray:
-        """Compute the supply vector for one unit of a given product."""
-        if index not in self._cache:
-            self._cache[index] = self._calculate(index)
-        return self._cache[index]
-
-    def __call__(self, index: int, amount: float) -> np.ndarray:
-        return self.calculate(index) * amount
+    def add_to_cache(self, index: int, unit_score: float) -> None:
+        """Store a pre-computed per-unit cumulative score (for a demand amount of 1)."""
+        self._score_cache[index] = float(unit_score)
 
     def set_score_row(self, characterized_biosphere: spmatrix) -> None:
         """Pre-compute the per-activity score row used to reduce supply vectors to scores.
