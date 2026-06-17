@@ -1,19 +1,36 @@
 import numpy as np
-from bw2calc import LCA
+from bw2calc import LCA, spsolve
 from scipy.sparse import spmatrix
 
 from bw_graph_tools.graph_traversal.graph_objects import Node
 
 
 class CachingSolver:
-    """Class which caches expensive linear algebra solution vectors."""
+    """Class which caches expensive linear algebra solutions.
+
+    Two caches are maintained:
+
+    * ``_cache`` stores full supply vectors keyed by product index, used by the legacy
+      ``calculate``/``__call__`` interface.
+    * ``_score_cache`` stores per-unit *cumulative LCA scores* (scalars) keyed by product index,
+      used by the batched ``scores`` interface.
+
+    The graph traversal only needs cumulative scores, not the full supply vectors. The batched
+    ``scores`` method solves all requested products in a single multi-right-hand-side solve, which
+    is much faster than solving one product at a time (especially with PARDISO via ``pypardiso``,
+    which reuses its cached factorization across calls).
+    """
 
     def __init__(self, lca: LCA):
         self.lca = lca
         self._cache = {}
+        self._score_cache = {}
+        # 1-D array of per-activity characterized scores (column sums of the characterized
+        # biosphere matrix). Set by `set_score_row` before `scores` is called.
+        self.score_row = None
 
     def in_cache(self, indices: set[int]) -> set[int]:
-        """Return all `indices` values which are in the cache."""
+        """Return all `indices` values which are in the supply vector cache."""
         return indices & self._cache.keys()
 
     def add_to_cache(self, index: int, result: np.ndarray) -> None:
@@ -26,13 +43,55 @@ class CachingSolver:
         return self.lca.solve_linear_system()
 
     def calculate(self, index: int) -> np.ndarray:
-        """Compute cumulative LCA score for one unit of a given activity."""
+        """Compute the supply vector for one unit of a given product."""
         if index not in self._cache:
             self._cache[index] = self._calculate(index)
         return self._cache[index]
 
     def __call__(self, index: int, amount: float) -> np.ndarray:
         return self.calculate(index) * amount
+
+    def set_score_row(self, characterized_biosphere: spmatrix) -> None:
+        """Pre-compute the per-activity score row used to reduce supply vectors to scores.
+
+        ``characterized_biosphere`` is the characterization-times-biosphere matrix (biosphere
+        flows by activities). Its column sums give, for each activity, the cumulative score per
+        unit of supply, so that ``score_row @ supply`` equals
+        ``(characterized_biosphere * supply).sum()``.
+        """
+        self.score_row = np.asarray(characterized_biosphere.sum(axis=0)).ravel()
+
+    def scores(self, indices: list[int], amounts: list[float]) -> list[float]:
+        """Compute cumulative LCA scores for several products in a single batched solve.
+
+        Parameters
+        ----------
+        indices : list[int]
+            Product (technosphere row) indices to demand, one unit each.
+        amounts : list[float]
+            Demanded amount for each product index, in the same order.
+
+        Returns
+        -------
+        list[float]
+            Cumulative LCA score for each `(index, amount)` pair, in input order.
+        """
+        missing = [index for index in indices if index not in self._score_cache]
+        if missing:
+            matrix = self.lca.technosphere_matrix
+            demand = np.zeros((matrix.shape[0], len(missing)))
+            for column, index in enumerate(missing):
+                demand[index, column] = 1
+            supply = spsolve(matrix, demand)
+            # `spsolve` may squeeze a single right-hand-side down to one dimension.
+            if supply.ndim == 1:
+                supply = supply.reshape(-1, 1)
+            unit_scores = np.asarray(self.score_row @ supply).ravel()
+            for index, score in zip(missing, unit_scores):
+                self._score_cache[index] = float(score)
+        return [
+            self._score_cache[index] * amount for index, amount in zip(indices, amounts)
+        ]
 
 
 class Counter:
