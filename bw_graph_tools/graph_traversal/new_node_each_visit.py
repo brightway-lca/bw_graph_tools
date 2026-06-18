@@ -55,9 +55,7 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[GraphTraversalSettings])
 
     * `technosphere_matrix`
     * `technosphere_mm`
-    * `solve_linear_system()`
     * `demand`
-    * `demand_array`
 
     You can subclass `NewNodeEachVisitGraphTraversal` and redefine
     `get_characterized_biosphere` if your LCA class does not have a traditional
@@ -95,6 +93,10 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[GraphTraversalSettings])
         }
         self._calculation_count = Counter()
         self.characterized_biosphere = self.get_characterized_biosphere(self.lca)
+        # Give the solver the score row it needs to reduce supply vectors to cumulative scores
+        # in its batched `scores` method. Guarded so custom solvers without this method still work.
+        if hasattr(self._caching_solver, "set_score_row"):
+            self._caching_solver.set_score_row(self.characterized_biosphere)
 
     @classmethod
     @deprecated(
@@ -427,11 +429,24 @@ class NewNodeEachVisitGraphTraversal(BaseGraphTraversal[GraphTraversalSettings])
         cutoff_score: float,
         max_depth: Optional[int] = None,
     ) -> None:
-        for product_index, product_amount in zip(product_indices, product_amounts):
+        # Solve for all of this node's input products at once. The batched solver returns the
+        # cumulative score per input directly, avoiding one linear solve per product.
+        product_indices = list(product_indices)
+        product_amounts = list(product_amounts)
+        if hasattr(caching_solver, "scores"):
+            cumulative_scores = caching_solver.scores(product_indices, product_amounts)
+        else:
+            # Backwards-compatible path for custom solvers without batched `scores`.
+            cumulative_scores = [
+                float((characterized_biosphere * caching_solver(pi, pa)).sum())
+                for pi, pa in zip(product_indices, product_amounts)
+            ]
+
+        for product_index, product_amount, cumulative_score in zip(
+            product_indices, product_amounts, cumulative_scores
+        ):
             producer_index = production_exchange_mapping[product_index]
 
-            supply = caching_solver(product_index, product_amount)
-            cumulative_score = float((characterized_biosphere * supply).sum())
             reference_product_net_production_amount = matrix[
                 product_index, producer_index
             ]
