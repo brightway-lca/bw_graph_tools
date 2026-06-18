@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-* Batched, multi-product graph-traversal scoring: each node's input products are now scored together instead of one product at a time, following the same strategy as `bw2calc.FastSupplyArraysMixin`. With PARDISO (`pypardiso`) all of a node's inputs are solved in a single multi-right-hand-side `spsolve`, reusing the cached factorization. Without PARDISO (UMFPACK / SuperLU), where a multi-RHS solve is slower, the LCA's technosphere matrix is decomposed once (`decompose_technosphere`) and inputs are solved iteratively through the reused `lca.solver`. `CachingSolver` gains a `scores()` batch method and a `set_score_row()` helper, and caches per-unit cumulative scores. Results are numerically identical to the previous per-product implementation. Custom solvers passed via `GraphTraversalSettings.caching_solver` without a `scores()` method continue to work via a fallback path.
+## [0.9] - 2026-06-18
+
+* [#46 Batched multi-product graph-traversal scoring](https://github.com/brightway-lca/bw_graph_tools/pull/46): Each node's input products are now scored together in a single batched solve, reusing the cached matrix factorization for improved performance.
 
 ## [0.8] - 2026-05-13
 
