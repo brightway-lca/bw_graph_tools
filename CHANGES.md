@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10] - 2026-07-12
+
 * [#49](https://github.com/brightway-lca/bw_graph_tools/pull/49): Add `gpe_zeroth_heuristic`, an authoritative production-exchange finder that reads explicit modeller-provided `reference` flags (`kind="reference"` resources from `bw_processing>=1.6`, exposed via `matrix_utils>=0.9`). It runs first in `guess_production_exchanges`, so any column with an explicit reference exchange is resolved directly instead of guessed — fixing co-production columns that the structural heuristics cannot disambiguate (see cauldron/brightway-api#739). Requires `bw_processing>=1.6` and `matrix_utils>=0.9`.
 
 ## [0.9] - 2026-06-18

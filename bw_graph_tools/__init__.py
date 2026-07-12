@@ -12,7 +12,7 @@ __all__ = (
     "to_normalized_adjacency_matrix",
 )
 
-__version__ = "0.9"
+__version__ = "0.10"
 
 from bw_graph_tools.graph_traversal import (
     AssumedDiagonalGraphTraversal,
