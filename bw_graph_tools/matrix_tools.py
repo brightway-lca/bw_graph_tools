@@ -47,6 +47,37 @@ def to_normalized_adjacency_matrix(
     return normalized
 
 
+def gpe_zeroth_heuristic(mm: mu.MappedMatrix) -> Tuple[np.ndarray, np.ndarray]:
+    """Use explicit reference-exchange flags to find production exchange indices.
+
+    If a resource group carries a ``reference`` boolean array (stored in the
+    datapackage with ``kind="reference"``), the entries flagged ``True`` are the
+    production/reference exchanges declared by the modeller. This is
+    authoritative: it is used in preference to all the structural heuristics,
+    which can only guess and cannot disambiguate e.g. co-production columns.
+
+    Operates on the masked resource-group data, so the returned values are matrix
+    indices. Resource groups without a reference array are silently ignored via
+    ``KeyError`` (mirroring ``gpe_second_heuristic``'s handling of ``flip``).
+
+    Returns a tuple of numpy integer matrix indices, rows by columns.
+    """
+    rows, cols = [], []
+
+    for group in mm.groups:
+        try:
+            reference = group.reference
+        except KeyError:
+            # No reference array given
+            continue
+        rows.append(group.row_masked[reference])
+        cols.append(group.col_masked[reference])
+
+    if rows:
+        return np.hstack(rows), np.hstack(cols)
+    return np.array([], dtype=np.int64), np.array([], dtype=np.int64)
+
+
 def gpe_first_heuristic(mm: mu.MappedMatrix) -> Tuple[np.ndarray, np.ndarray]:
     """Use first heuristic (same input and output ids) to find production exchange indices.
 
@@ -296,11 +327,16 @@ def guess_production_exchanges(mm: mu.MappedMatrix) -> Tuple[np.ndarray, np.ndar
 
     Try the following in order per activity (column):
 
+    * Explicit ``reference`` flag set by the modeller (authoritative)
     * Same input and output index
     * Single value where ``flip`` is negative
     * Single positive value
     * Single negative value (waste treatment)
     * Unique product across remaining unidentified columns
+
+    The first step reads explicit reference-exchange flags from the input data
+    packages; any column it identifies is treated as authoritative and is not
+    revisited by the structural heuristics that follow.
 
     Raises ``UnclearProductionExchange`` if these conditions are not met for any activity.
 
@@ -310,12 +346,25 @@ def guess_production_exchanges(mm: mu.MappedMatrix) -> Tuple[np.ndarray, np.ndar
     if mm.matrix.shape[0] == 0:
         raise ValueError("Empty matrix")
 
-    row_indices, col_indices = gpe_first_heuristic(mm)
+    # Authoritative: explicit modeller-provided reference flags win over all heuristics.
+    row_indices, col_indices = gpe_zeroth_heuristic(mm)
+
+    # First heuristic (shared input/output id). Drop any column already claimed
+    # authoritatively by the zeroth heuristic so we never contradict the modeller.
+    row_first, col_first = gpe_first_heuristic(mm)
+    if col_indices.size:
+        keep = ~np.isin(col_first, col_indices)
+        row_first, col_first = row_first[keep], col_first[keep]
+    row_indices = np.hstack([row_indices, row_first])
+    col_indices = np.hstack([col_indices, col_first])
 
     # Every column must have an activity with some reference product or the system
     # is not solvable. Therefore we can look across all columns. We will do
     # all the work in matrix indices.
-    missing = np.setdiff1d(np.arange(mm.matrix.shape[0]), col_indices, assume_unique=True)
+    # `col_indices` may contain a column more than once (e.g. a co-production
+    # column with several explicit reference exchanges), so we cannot assume the
+    # inputs are unique here.
+    missing = np.setdiff1d(np.arange(mm.matrix.shape[0]), col_indices)
 
     # Short circuit other steps if possible; assumption is that this step will
     # be taken for most matrices
@@ -331,7 +380,10 @@ def guess_production_exchanges(mm: mu.MappedMatrix) -> Tuple[np.ndarray, np.ndar
     if row_indices.shape != col_indices.shape:
         raise ValueError("Guessed row indices do not match guessed column indices.")
 
-    missing = np.setdiff1d(np.arange(mm.matrix.shape[0]), col_indices, assume_unique=True)
+    # `col_indices` may contain a column more than once (e.g. a co-production
+    # column with several explicit reference exchanges), so we cannot assume the
+    # inputs are unique here.
+    missing = np.setdiff1d(np.arange(mm.matrix.shape[0]), col_indices)
     if missing.size:
         raise UnclearProductionExchange(
             "Can't find production exchanges for columns: {}".format(list(missing))
