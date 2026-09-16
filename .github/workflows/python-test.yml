@@ -54,6 +54,13 @@ jobs:
         run: |
           pip install --pre .[testing] # install the package and the testing deps
 
+      # `pypardiso` switches bw2calc (and our batched solver) to the PARDISO code path.
+      # It needs MKL, so it is only available on x86 Linux/Windows, not on ARM macOS runners.
+      - name: Install pypardiso (PARDISO solver path)
+        if: matrix.os != 'macos-latest'
+        run: |
+          pip install pypardiso
+
       - name: Test with pytest
         run: |
           pytest

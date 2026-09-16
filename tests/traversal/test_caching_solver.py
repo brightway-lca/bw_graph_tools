@@ -6,6 +6,7 @@ from bw2data import Database, Method
 from bw2data.tests import bw2test
 
 from bw_graph_tools import GraphTraversalSettings, NewNodeEachVisitGraphTraversal
+from bw_graph_tools.graph_traversal import utils
 from bw_graph_tools.graph_traversal.utils import CachingSolver
 
 
@@ -233,3 +234,98 @@ def test_injected_caching_solver_is_used():
     assert gt2._caching_solver is solver, "Injected solver should be used directly"
     # Score cache should already contain the indices from the first traversal
     assert set(solver._score_cache.keys()) >= cached_after_first
+
+
+def _pypardiso_like_spsolve(A, b):
+    """Mimic `pypardiso.spsolve`, which returns `solver.solve(A, b).squeeze()`.
+
+    PARDISO returns a solution with the same shape as `b` (an `(n, nrhs)` array here), and
+    `pypardiso.spsolve` squeezes it for scipy compatibility. Squeezing drops *every* length-1
+    dimension, so a single-activity technosphere (`n == 1`) collapses to a 0-d array.
+    """
+    return np.asarray(np.linalg.solve(A.toarray(), b)).squeeze()
+
+
+def test_unit_scores_pardiso_single_activity_technosphere(monkeypatch):
+    """A 1x1 technosphere solves correctly even though PARDISO squeezes away both dimensions."""
+    monkeypatch.setattr(utils, "spsolve", _pypardiso_like_spsolve)
+    solver = CachingSolver(MatrixMockLCA(sp.csc_matrix(np.array([[2.0]]))))
+    solver.score_row = np.array([3.0])
+
+    assert np.allclose(solver._unit_scores_pardiso([0]), [1.5])
+
+
+def test_unit_scores_pardiso_multiple_indices(monkeypatch):
+    """Batched multi-right-hand-side solves keep one score per requested index."""
+    monkeypatch.setattr(utils, "spsolve", _pypardiso_like_spsolve)
+    A = sp.csc_matrix(np.array([[2.0, 0.0, 0.0], [0.0, 3.0, 0.0], [1.0, 0.0, 4.0]]))
+    solver = CachingSolver(MatrixMockLCA(A))
+    solver.score_row = np.array([1.0, 1.0, 1.0])
+
+    inverse = np.linalg.inv(A.toarray())
+    expected = [float(solver.score_row @ inverse[:, i]) for i in (0, 2)]
+    assert np.allclose(solver._unit_scores_pardiso([0, 2]), expected)
+
+
+def test_scores_single_activity_technosphere_with_pardiso(monkeypatch):
+    """`scores` works under PARDISO for a single-activity technosphere."""
+    monkeypatch.setattr(utils, "PYPARDISO", True)
+    monkeypatch.setattr(utils, "spsolve", _pypardiso_like_spsolve)
+    solver = CachingSolver(MatrixMockLCA(sp.csc_matrix(np.array([[2.0]]))))
+    solver.score_row = np.array([3.0])
+
+    assert np.allclose(solver.scores([0], [4.0]), [6.0])
+
+
+def _single_activity_lca():
+    """LCA for a database with one activity and only biosphere edges (1x1 technosphere).
+
+    This is the shape produced by minimal `bw_timex` / teaching examples: one foreground
+    activity whose only exchanges are its production edge and elementary flows.
+    """
+    Database("bio").write(
+        {("bio", "a"): {"type": "emission", "name": "a", "exchanges": []}}
+    )
+    Database("t").write(
+        {
+            ("t", "1"): {
+                "name": "1",
+                "exchanges": [
+                    {"input": ("bio", "a"), "amount": 2.0, "type": "biosphere"},
+                    {"input": ("t", "1"), "amount": 1, "type": "production"},
+                ],
+            }
+        }
+    )
+    Method(("test",)).write([(("bio", "a"), 1)])
+
+    lca = LCA({("t", "1"): 1}, ("test",))
+    lca.lci()
+    lca.lcia()
+    return lca
+
+
+def _assert_single_activity_traversal(lca):
+    gt = NewNodeEachVisitGraphTraversal(lca, GraphTraversalSettings())
+    gt.traverse()
+
+    assert lca.technosphere_matrix.shape == (1, 1)
+    activity_nodes = [
+        node for uid, node in gt.nodes.items() if uid != gt._functional_unit_unique_id
+    ]
+    assert len(activity_nodes) == 1
+    assert np.allclose(activity_nodes[0].cumulative_score, lca.score)
+
+
+@bw2test
+def test_traversal_single_activity_database_with_pardiso(monkeypatch):
+    """Single-activity traversal under PARDISO-like squeezing, on every platform."""
+    monkeypatch.setattr(utils, "PYPARDISO", True)
+    monkeypatch.setattr(utils, "spsolve", _pypardiso_like_spsolve)
+    _assert_single_activity_traversal(_single_activity_lca())
+
+
+@bw2test
+def test_traversal_single_activity_database_installed_solver():
+    """Same traversal against whichever solver is actually installed (real `pypardiso` in CI)."""
+    _assert_single_activity_traversal(_single_activity_lca())

@@ -79,10 +79,10 @@ class CachingSolver:
         demand = np.zeros((matrix.shape[0], len(indices)))
         for column, index in enumerate(indices):
             demand[index, column] = 1
-        supply = spsolve(matrix, demand)
-        # `spsolve` may squeeze a single right-hand-side down to one dimension.
-        if supply.ndim == 1:
-            supply = supply.reshape(-1, 1)
+        # `pypardiso.spsolve` squeezes *every* length-1 dimension out of the solution, so a
+        # single right-hand-side comes back as `(n,)` and a single-activity technosphere
+        # (`n == 1`) as a 0-d array. Restore the `(n, nrhs)` shape before reducing to scores.
+        supply = np.asarray(spsolve(matrix, demand)).reshape(matrix.shape[0], len(indices))
         return np.asarray(self.score_row @ supply).ravel()
 
     def _unit_scores_iterative(self, indices: list[int]) -> np.ndarray:

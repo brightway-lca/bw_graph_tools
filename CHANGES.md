@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+* Fix `ValueError: matmul: Input operand 1 does not have enough dimensions` in `CachingSolver._unit_scores_pardiso` when traversing a system whose technosphere matrix has a single activity. `pypardiso.spsolve` squeezes every length-1 dimension out of its solution, so a 1x1 technosphere came back as a 0-d array; the supply array is now reshaped to `(n, nrhs)` before being reduced to scores. Only affected installations with `pypardiso`.
+
 ## [0.10] - 2026-07-12
 
 * [#49](https://github.com/brightway-lca/bw_graph_tools/pull/49): Add `gpe_zeroth_heuristic`, an authoritative production-exchange finder that reads explicit modeller-provided `reference` flags (`kind="reference"` resources from `bw_processing>=1.6`, exposed via `matrix_utils>=0.9`). It runs first in `guess_production_exchanges`, so any column with an explicit reference exchange is resolved directly instead of guessed — fixing co-production columns that the structural heuristics cannot disambiguate (see cauldron/brightway-api#739). Requires `bw_processing>=1.6` and `matrix_utils>=0.9`.
